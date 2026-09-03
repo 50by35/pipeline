@@ -13,7 +13,7 @@ Example harmonization scripts covering 15 country/survey combinations are availa
 
 | `code` | `year` | `survname` | Welfare | Refugee definition | `welfare_self` | Script |
 |---|---|---|---|---|---|---|
-| CHL | 2022 | CASEN | Income | Mother's country VEN/COL/HTI (proxy) | `ytotcorh` − `yaimcorh` (HH assistance/subsidy income), then per-adult-equivalent-converted | [do-file](https://github.com/GPID-WB/50by35-data/blob/main/stata/CHL_2022_CASEN_V01_M_V01_A_FDP_WELF.do) |
+| CHL | 2022 | CASEN | Income | Mother's country VEN/COL/HTI (proxy) | `ytotcorh` − `yaimcorh` (HH assistance/subsidy income), then per-adult-equivalent-converted | [do-file](https://github.com/GPID-WB/50by35-pipeline/blob/main/stata/CHL_2022_CASEN_V01_M_V01_A_FDP_WELF.do) |
 | CMR | 2025 | FDS | Consumption | `pops==1` — ⚠️ combined refugee/asylum-seeker code, not separable in source data | `nom_cons_minus_aid` (consumption net of aid, source-provided) | [do-file](https://github.com/GPID-WB/50by35-data/blob/main/stata/CMR_2025_FDS_V01_M_V01_A_FDP_WELF.do) |
 | COL | 2022 | GEIH | Income | `refugee==1`, Venezuelan-born only | `welfare` − `inc_transf_inst` (institutional/gov't transfers) | [do-file](https://github.com/GPID-WB/50by35-data/blob/main/stata/COL_2022_GEIH_V01_M_V01_A_FDP_WELF.do) |
 | COL | 2023 | GEIH | Income | `refugee==1`, Venezuelan-born only | `welfare` − `inc_transf_inst` (institutional/gov't transfers) | [do-file](https://github.com/GPID-WB/50by35-data/blob/main/stata/COL_2023_GEIH_V01_M_V01_A_FDP_WELF.do) |

@@ -5,7 +5,7 @@ This repository contains the Quarto book documenting the data pipeline used to *
 ## Live Book
 
 The rendered book is available at:
-**https://GPID-WB.github.io/50by35-data/**
+**https://GPID-WB.github.io/50by35-pipeline/**
 
 ## Repository Structure
 
@@ -34,8 +34,8 @@ See the **[`wiki/contributing.md`](wiki/contributing.md)** file for full setup i
 
 ```bash
 # Clone the repo
-git clone https://github.com/GPID-WB/50by35-data.git
-cd 50by35-data
+git clone https://github.com/GPID-WB/50by35-pipeline.git
+cd 50by35-pipeline
 
 # Install R packages
 Rscript -e "renv::restore()"
