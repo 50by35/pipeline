@@ -1,5 +1,5 @@
 ---
-title: "50by35 Microdata Pipeline"
+title: "50by35 Self-Reliance Microdata Pipeline"
 ---
 
 ::: {.callout-important}
@@ -9,7 +9,7 @@ See the [contributor guide](wiki/contributing.md) before making changes.
 :::
 
 
-This book documents the pipeline to **harmonize and publish** microdata used to monitor the UNHCR **50by35 vision**: that 50 percent of refugees in protracted crises are self-reliant by 2035.
+This book documents the pipeline to **harmonize and publish** microdata used to monitor the  self-reliance component of  UNHCR's **50by35 vision**: that 50 percent of refugees in protracted crises are self-reliant by 2035.
 
 ## The Pipeline at a Glance
 
@@ -48,7 +48,7 @@ The pipeline is documented here in three parts:
 
 1. **[Upload Raw Data](chapters/01-raw-upload.qmd)** — raw microdata and documentation are uploaded to **PRIMUS**. Approved files are published to **datalibweb** for harmonization.
 2. **[Harmonize Data](chapters/02-harmonization.qmd)** — raw microdata is harmonized to the 50by35 schema.
-3. **[Upload Harmonized Data](chapters/03-harmonized-upload.qmd)** — harmonized microdata and harmonization scripts are uploaded to **PRIMUS**. Approved files are published to **datalibweb** for 50by35 monitoring.
+3. **[Upload Harmonized Data](chapters/03-harmonized-upload.qmd)** — harmonized microdata and harmonization scripts are uploaded to **PRIMUS**. Approved files are published to **datalibweb** for monitoring the self-reliance component of the 50by35 vision.
 
 ::: {.callout-note}
 ## Key systems
