@@ -73,11 +73,11 @@ so Quarto can find it.
 Open **Git Bash** (installed with Git) or the **Positron Terminal** and run:
 
 ```bash
-git clone https://github.com/GPID-WB/50by35-pipeline.git
+git clone https://github.com/50by35/pipeline.git
 ```
 
-Then open the `50by35-pipeline` folder in Positron: **File → Open Folder…** and select the
-`50by35-pipeline` folder. Positron will detect it as an R project automatically.
+Then open the `pipeline` folder in Positron: **File → Open Folder…** and select the
+`pipeline` folder. Positron will detect it as an R project automatically.
 
 ---
 

@@ -1,11 +1,11 @@
 # 50by35 Microdata Pipeline
 
-This repository contains the Quarto book documenting the data pipeline used to **upload, harmonize, and review** microdata used to monitor the UNHCR **50by35 vision**: that 50 percent of refugees in protracted crises are self-reliant by 2035.
+This repository contains the Quarto book documenting the pipeline to **harmonize and publish** microdata used to monitor the  self-reliance component of  UNHCR's **50by35 vision**: that 50 percent of refugees in protracted crises are self-reliant by 2035.
 
 ## Live Book
 
 The rendered book is available at:
-**https://GPID-WB.github.io/50by35-pipeline/**
+**https://50by35.github.io/pipeline/**
 
 ## Repository Structure
 
@@ -34,8 +34,8 @@ See the **[`wiki/contributing.md`](wiki/contributing.md)** file for full setup i
 
 ```bash
 # Clone the repo
-git clone https://github.com/GPID-WB/50by35-pipeline.git
-cd 50by35-pipeline
+git clone https://github.com/50by35/pipeline.git
+cd pipeline
 
 # Install R packages
 Rscript -e "renv::restore()"

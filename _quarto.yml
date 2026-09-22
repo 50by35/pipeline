@@ -8,7 +8,7 @@ book:
   date: today
   author:
     - name: "World Bank Group"
-  repo-url: https://github.com/GPID-WB/50by35-pipeline
+  repo-url: https://github.com/50by35/pipeline
   repo-actions: [edit, issue]
   chapters:
     - index.qmd
