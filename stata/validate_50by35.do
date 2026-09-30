@@ -145,5 +145,21 @@ if !_rc {
         exit 459
     }
 }
+capture confirm variable natpovline
+if !_rc {
+    capture assert natpovline > 0 | missing(natpovline)
+    if _rc {
+        di as error "SCHEMA ERROR: natpovline must be positive or missing"
+        exit 459
+    }
+}
+capture confirm variable arrival_year
+if !_rc {
+    capture assert (inrange(arrival_year, 1900, year) & arrival_year==floor(arrival_year)) | missing(arrival_year)
+    if _rc {
+        di as error "SCHEMA ERROR: arrival_year outside 1900-survey year"
+        exit 459
+    }
+}
 
 di as result "50by35 schema validation PASSED (`=_N' observations)"

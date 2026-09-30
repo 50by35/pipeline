@@ -59,6 +59,13 @@ validate_50by35 <- function(df) {
     fail("educat4 outside 1-4")
   if ("empstat" %in% names(df) && !all(df$empstat %in% c(1:4, NA)))
     fail("empstat outside 1-4")
+  if ("natpovline" %in% names(df) &&
+      any(df$natpovline <= 0, na.rm = TRUE))
+    fail("natpovline must be positive")
+  if ("arrival_year" %in% names(df) &&
+      any(df$arrival_year < 1900 | df$arrival_year > df$year |
+            df$arrival_year != floor(df$arrival_year), na.rm = TRUE))
+    fail("arrival_year outside 1900-survey year")
 
   message("50by35 schema validation PASSED (", nrow(df), " observations)")
   invisible(TRUE)

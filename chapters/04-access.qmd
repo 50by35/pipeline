@@ -208,6 +208,16 @@ headcount <- weighted.mean(
 )
 
 sprintf("%s %d - Self-reliance share: %.4f  Headcount: %.4f ($%.2f/day 2021PPP)", ccode, yr, sr_share, headcount, zline)
+
+# optional national poverty headcount, if the national line is in the file
+if ("natpovline" %in% names(welf)) {
+  national_headcount <- weighted.mean(
+    welf$welfare < welf$natpovline,
+    welf$weight,
+    na.rm = TRUE
+  )
+  sprintf("National poverty headcount: %.4f", national_headcount)
+}
 ```
 
 ## Stata
@@ -249,9 +259,17 @@ local hc : di %9.6f r(mean)
 
 drop _sr _poor
 di "`ccode' `year' - Self-reliance share: `sr'  Headcount: `hc' ($`zline'/day 2021PPP)"
+
+* optional national poverty headcount; natpovline shares welfare's LCU/time basis
+capture confirm variable natpovline
+if !_rc {
+    gen byte _poor_nat = welfare < natpovline if !missing(natpovline)
+    qui sum _poor_nat [aw=weight]
+    di "National poverty headcount: " %9.6f r(mean)
+    drop _poor_nat
+}
 ```
 
 :::
 
 For citation guidance and further options (e.g. PPP conversion on load), see the `datalibweb` help file in Stata and the [datalibweb guidelines](https://github.com/worldbank/datalibweb); questions to the datalibweb team at `datalibweb@worldbank.org`.
-

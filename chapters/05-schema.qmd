@@ -55,6 +55,8 @@ The **unit of observation** is the individual: one row per person, with househol
 | `empstat` | Employment status | `byte` | `1`–`4` | See value labels below |
 | `strata` | Sampling strata | `int` | — | Design variable for variance estimation |
 | `psu` | Primary sampling unit | `long` | — | Design variable for variance estimation |
+| `natpovline` | National poverty line | `double` | > 0, LCU, annual per capita | Express in the same currency, reference period, and price basis as `welfare` and `welfare_self` |
+| `arrival_year` | Year of arrival | `int` | 1900–survey year | Year the individual arrived in the host country |
 
 ## Value Labels
 
@@ -82,6 +84,4 @@ Categorical variables must use these codes and labels exactly.
 
 ## Validation
 
-These variables and value-label codes are enforced by the validation scripts (`Stata/validate_50by35.do`, `R/validate_50by35.R`), which run before every harmonized upload. Any deviation from the schema triggers an error and prevents the harmonized file from being uploaded to datalibweb. The checks cover missing values in mandatory variables, negative or zero values in `welfare` and `weight`, and that `welfare_self` is not greater than `welfare`. Households where `hhsize` differs from the number of `pid` records are flagged with a warning rather than an error, since rosters can be incomplete and refugee-only samples keep a subset of household members.
-
-
+These variables and value-label codes are enforced by the validation scripts (`Stata/validate_50by35.do`, `R/validate_50by35.R`), which run before every harmonized upload. Any deviation from the schema triggers an error and prevents the harmonized file from being uploaded to datalibweb. Optional variables may be omitted; when included, non-missing `natpovline` values must be positive and non-missing `arrival_year` values must be integer years between 1900 and the survey year. The checks also cover missing values in mandatory variables, negative or zero values in `welfare` and `weight`, and that `welfare_self` is not greater than `welfare`. Households where `hhsize` differs from the number of `pid` records are flagged with a warning rather than an error, since rosters can be incomplete and refugee-only samples keep a subset of household members.
