@@ -70,6 +70,10 @@ Categorical variables must use these codes and labels exactly.
 
 : `0` Female · `1` Male
 
+`camp`
+
+: `0` Non-camp · `1` Camp
+
 `urban`
 
 : `0` Rural · `1` Urban
@@ -84,4 +88,4 @@ Categorical variables must use these codes and labels exactly.
 
 ## Validation
 
-These variables and value-label codes are enforced by the validation scripts (`Stata/validate_50by35.do`, `R/validate_50by35.R`), which run before every harmonized upload. Any deviation from the schema triggers an error and prevents the harmonized file from being uploaded to datalibweb. Optional variables may be omitted; when included, non-missing `natpovline` values must be positive and non-missing `arrival_year` values must be integer years between 1900 and the survey year. The checks also cover missing values in mandatory variables, negative or zero values in `welfare` and `weight`, and that `welfare_self` is not greater than `welfare`. Households where `hhsize` differs from the number of `pid` records are flagged with a warning rather than an error, since rosters can be incomplete and refugee-only samples keep a subset of household members.
+These variables and value-label codes are enforced by the validation scripts (`Stata/validate_50by35.do`, `R/validate_50by35.R`), which run before every harmonized upload. Any deviation from the schema triggers an error and prevents the harmonized file from being uploaded to datalibweb. Checks include mandatory-variable presence and missingness, identifier formats and uniqueness, value ranges and categorical labels, and integer constraints. Optional variables may be omitted; when included, non-missing `natpovline` values must be positive and non-missing `arrival_year` values must be integer years between 1900 and the survey year. Households where `hhsize` differs from the number of `pid` records are flagged with a warning rather than an error, since rosters can be incomplete and refugee-only samples keep a subset of household members.
