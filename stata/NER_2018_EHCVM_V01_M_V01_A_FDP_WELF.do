@@ -2,9 +2,8 @@
 NER_2018_EHCVM_V01_M_V01_A_FDP_WELF.do
 50by35 pipeline — Step 2: harmonize Niger EHCVM 2018 to the 50by35 schema
 
-Inputs : $REFUGEE_RAW_DATA/Niger/household_NER_2018.dta
-         $REFUGEE_RAW_DATA/Niger/individual_NER_2018.dta
-         (or datalibweb's FDPRAW collection — see chapters/04-access.qmd)
+Inputs : datalibweb FDPRAW — household_NER_2018.dta,
+         individual_NER_2018.dta
 Output : ${FIFTYBY35_PROCESSED:-data/processed}/NER_2018_EHCVM_V01_M_V01_A_FDP_WELF.dta
 
 Variable construction follows the WB-UNHCR Refugee Welfare Report
@@ -18,22 +17,26 @@ internally displaced persons.
 version 18
 clear
 set more off
+capture log close _all
 
-* ---- raw data source ------------------------------------------------------
-* Reads from REFUGEE_RAW_DATA. The same files can also be fetched from
-* datalibweb's FDPRAW collection instead (see chapters/04-access.qmd,
-* requires the datalibweb Stata package + a registered token) — swap the
-* `use`/`merge...using` lines below for a datalibweb call if needed.
-local rawroot : env REFUGEE_RAW_DATA
-if `"`rawroot'"' == "" {
-    di as error "Set REFUGEE_RAW_DATA to the raw-data root folder"
+* ---- raw data source: datalibweb FDPRAW -------------------------------
+local dlw_token : env DLW_TOKEN
+if `"`dlw_token'"' == "" {
+    di as error "Set DLW_TOKEN in the Stata process environment"
     exit 601
 }
+quietly datalibweb, token(`dlw_token') version(2)
+local dlw_surveyid "NER_2018_EHCVM_V01_M"
 local outdir : env FIFTYBY35_PROCESSED
 if `"`outdir'"' == "" local outdir "~/Github/50by35-data/data/processed"
 
 * ---- household level ----------------------------------------------------
-use `"`rawroot'/Niger/household_NER_2018.dta"', clear
+tempfile raw_individual
+datalibweb, country(NER) years(2018) type(FDPRAW) ///
+    surveyid(`dlw_surveyid') filename(individual_NER_2018.dta) clear
+save `raw_individual'
+datalibweb, country(NER) years(2018) type(FDPRAW) ///
+    surveyid(`dlw_surveyid') filename(household_NER_2018.dta) clear
 
 * welfare: HH nominal annual consumption (dtot), spatially deflated,
 * per capita, in LCU (XOF). welfare_type = 1 (consumption).
@@ -44,7 +47,7 @@ gen double welfare = (dtot/def_spa)/hhsize
 gen double welfare_self = (max(dtot - income_aid, 0)/def_spa)/hhsize
 
 * ---- merge individuals ---------------------------------------------------
-merge 1:m grappe menage using `"`rawroot'/Niger/individual_NER_2018.dta"'
+merge 1:m grappe menage using `raw_individual'
 keep if _merge==3
 drop _merge
 

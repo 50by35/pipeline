@@ -32,21 +32,25 @@ Users can interact with PRIMUS via the [web interface](https://primusuiprod.ase.
 
 ### Authentication
 
-Both clients use the same **datalibweb token** (valid 30 days, renewed on the [datalibweb website](https://datalibweb2.worldbank.org)).
+Both clients use the same **datalibweb token** (valid 30 days, renewed on the [datalibweb website](https://datalibweb2.worldbank.org)). Set up the PRIMUS client once per user; it stores the credential for later runs. Repeat the setup after renewing an expired token.
 
 ::: {.panel-tabset group="language"}
 
 ## R
 
 ```r
-primus_set_token("<your datalibweb token>")
+primus_set_token("<your datalibweb token>")  # one-time setup; stored for later runs
 ```
+
+The R PRIMUS and `dlw` packages use the same token and store it in the system keychain. You do not need to call `primus_set_token()` for every upload or access; call it again after renewing or replacing the token.
 
 ## Stata
 
 ```stata
 primus register, token(<your datalibweb token>)
 ```
+
+Register the token once with the Stata PRIMUS client, then repeat registration after renewal.
 
 :::
 

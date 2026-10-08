@@ -3,9 +3,8 @@ CRI_2024_ENAHO_V01_M_V01_A_FDP_WELF.do
 50by35 pipeline — Step 2: harmonize Costa Rica ENAHO 2024 to the
 50by35 schema
 
-Inputs : $REFUGEE_RAW_DATA/Costa Rica/2024 - households (with ppp21).dta
-         $REFUGEE_RAW_DATA/Costa Rica/2024 - individuals (with ppp21).dta
-         (or datalibweb's FDPRAW collection — see chapters/04-access.qmd)
+Inputs : datalibweb FDPRAW — 2024 - households (with ppp21).dta,
+         2024 - individuals (with ppp21).dta
 Output : ${FIFTYBY35_PROCESSED:-data/processed}/CRI_2024_ENAHO_V01_M_V01_A_FDP_WELF.dta
 
 Variable construction follows the WB-UNHCR Refugee Welfare Report
@@ -23,22 +22,26 @@ PPP-adjusted). welfare_type = 2.
 version 18
 clear
 set more off
+capture log close _all
 
-* ---- raw data source ------------------------------------------------------
-* Reads from REFUGEE_RAW_DATA. The same files can also be fetched from
-* datalibweb's FDPRAW collection instead (see chapters/04-access.qmd,
-* requires the datalibweb Stata package + a registered token) — swap the
-* `use`/`merge...using` lines below for a datalibweb call if needed.
-local rawroot : env REFUGEE_RAW_DATA
-if `"`rawroot'"' == "" {
-    di as error "Set REFUGEE_RAW_DATA to the raw-data root folder"
+* ---- raw data source: datalibweb FDPRAW -------------------------------
+local dlw_token : env DLW_TOKEN
+if `"`dlw_token'"' == "" {
+    di as error "Set DLW_TOKEN in the Stata process environment"
     exit 601
 }
+quietly datalibweb, token(`dlw_token') version(2)
+local dlw_surveyid "CRI_2024_ENAHO_V01_M"
 local outdir : env FIFTYBY35_PROCESSED
 if `"`outdir'"' == "" local outdir "~/Github/50by35-data/data/processed"
 
 * ---- household level ----------------------------------------------------
-use `"`rawroot'/Costa Rica/2024 - households (with ppp21).dta"', clear
+tempfile raw_individual
+datalibweb, country(CRI) years(2024) type(FDPRAW) ///
+    surveyid(`dlw_surveyid') filename("2024 - individuals (with ppp21).dta") clear
+save `raw_individual'
+datalibweb, country(CRI) years(2024) type(FDPRAW) ///
+    surveyid(`dlw_surveyid') filename("2024 - households (with ppp21).dta") clear
 
 * welfare: income per capita per day, already real/PPP-adjusted
 * (ipcf_a_day_ppp21), annualized to LCU (CRC). welfare_type = 2 (income).
@@ -54,7 +57,7 @@ replace     welfare_self = welfare if welfare_self > welfare & !missing(welfare)
 drop asst ipcf_self
 
 * ---- merge individuals ---------------------------------------------------
-merge 1:m hhid using `"`rawroot'/Costa Rica/2024 - individuals (with ppp21).dta"', ///
+merge 1:m hhid using `raw_individual', ///
     keep(3) nogen keepusing(pid lugnac a4 a5 nivinst condact)
 
 * refugees only: Nicaraguan-born

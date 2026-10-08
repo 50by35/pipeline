@@ -3,9 +3,8 @@ JOR_2021_VAF_V01_M_V01_A_FDP_WELF.do
 50by35 pipeline — Step 2: harmonize Jordan VAF (Vulnerability Assessment
 Framework) 2021 round to the 50by35 schema
 
-Inputs : $REFUGEE_RAW_DATA/Jordan/harmonize_household.dta
-         $REFUGEE_RAW_DATA/Jordan/harmonize_individual.dta
-         (or datalibweb's FDPRAW collection — see chapters/04-access.qmd)
+Inputs : datalibweb FDPRAW — harmonize_household.dta,
+         harmonize_individual.dta
 Output : ${FIFTYBY35_PROCESSED:-data/processed}/JOR_2021_VAF_V01_M_V01_A_FDP_WELF.dta
 
 Variable construction follows the WB-UNHCR Refugee Welfare Report
@@ -24,22 +23,26 @@ rent/utilities), annualized here per the schema. welfare_type = 1.
 version 18
 clear
 set more off
+capture log close _all
 
-* ---- raw data source ------------------------------------------------------
-* Reads from REFUGEE_RAW_DATA. The same files can also be fetched from
-* datalibweb's FDPRAW collection instead (see chapters/04-access.qmd,
-* requires the datalibweb Stata package + a registered token) — swap the
-* `use`/`merge...using` lines below for a datalibweb call if needed.
-local rawroot : env REFUGEE_RAW_DATA
-if `"`rawroot'"' == "" {
-    di as error "Set REFUGEE_RAW_DATA to the raw-data root folder"
+* ---- raw data source: datalibweb FDPRAW -------------------------------
+local dlw_token : env DLW_TOKEN
+if `"`dlw_token'"' == "" {
+    di as error "Set DLW_TOKEN in the Stata process environment"
     exit 601
 }
+quietly datalibweb, token(`dlw_token') version(2)
+local dlw_surveyid "JOR_2021_VAF_V01_M"
 local outdir : env FIFTYBY35_PROCESSED
 if `"`outdir'"' == "" local outdir "~/Github/50by35-data/data/processed"
 
 * ---- household level ----------------------------------------------------
-use `"`rawroot'/Jordan/harmonize_household.dta"', clear
+tempfile raw_individual
+datalibweb, country(JOR) years(2021) type(FDPRAW) ///
+    surveyid(`dlw_surveyid') filename(harmonize_individual.dta) clear
+save `raw_individual'
+datalibweb, country(JOR) years(2021) type(FDPRAW) ///
+    surveyid(`dlw_surveyid') filename(harmonize_household.dta) clear
 
 * this round only: the raw file pools both 2021 and 2023
 keep if year==2021
@@ -63,7 +66,7 @@ drop id_str
 
 * ---- merge individuals ---------------------------------------------------
 * (drop the individual file's own case weight — HH weight above applies)
-merge 1:m year Residence Form id using `"`rawroot'/Jordan/harmonize_individual.dta"', ///
+merge 1:m year Residence Form id using `raw_individual', ///
     keep(3) nogen keepusing(ind_id IndAge AdultEducatio IndEnrolledSchool ///
     IndDoYouWork NoWorkReason)
 

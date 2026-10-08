@@ -66,7 +66,7 @@ install.packages(c("tidyverse", "haven", "knitr", "gt", "ggplot2", "scales", "he
 
 Stata must be installed on your machine. Most team members will already have it.
 See [`wiki/r-and-stata-usage.md`](r-and-stata-usage.md) for how to configure Stata
-so Quarto can find it.
+so Quarto can find it and, when authorized, install the `datalibweb` Stata package.
 
 ### 6. Clone the repository
 

@@ -3,9 +3,8 @@ LBN_2023_VASYR_V01_M_V01_A_FDP_WELF.do
 50by35 pipeline — Step 2: harmonize Lebanon VASyR (Vulnerability
 Assessment of Syrian Refugees) 2023 round to the 50by35 schema
 
-Inputs : $REFUGEE_RAW_DATA/Lebanon/LBN_refugee_hhold.dta
-         $REFUGEE_RAW_DATA/Lebanon/LBN_refugee_ind.dta
-         (or datalibweb's FDPRAW collection — see chapters/04-access.qmd)
+Inputs : datalibweb FDPRAW — LBN_refugee_hhold.dta,
+         LBN_refugee_ind.dta
 Output : ${FIFTYBY35_PROCESSED:-data/processed}/LBN_2023_VASYR_V01_M_V01_A_FDP_WELF.dta
 
 Variable construction follows the WB-UNHCR Refugee Welfare Report
@@ -19,23 +18,27 @@ own poverty methodology. welfare_type = 1.
 version 18
 clear
 set more off
+capture log close _all
 
-* ---- raw data source ------------------------------------------------------
-* Reads from REFUGEE_RAW_DATA. The same files can also be fetched from
-* datalibweb's FDPRAW collection instead (see chapters/04-access.qmd,
-* requires the datalibweb Stata package + a registered token) — swap the
-* `use`/`merge...using` lines below for a datalibweb call if needed.
-local rawroot : env REFUGEE_RAW_DATA
-if `"`rawroot'"' == "" {
-    di as error "Set REFUGEE_RAW_DATA to the raw-data root folder"
+* ---- raw data source: datalibweb FDPRAW -------------------------------
+local dlw_token : env DLW_TOKEN
+if `"`dlw_token'"' == "" {
+    di as error "Set DLW_TOKEN in the Stata process environment"
     exit 601
 }
+quietly datalibweb, token(`dlw_token') version(2)
+local dlw_surveyid "LBN_2023_VASYR_V01_M"
 local outdir : env FIFTYBY35_PROCESSED
 if `"`outdir'"' == "" local outdir "~/Github/50by35-data/data/processed"
 
 * ---- individual + household level -----------------------------------------
-use `"`rawroot'/Lebanon/LBN_refugee_ind.dta"', clear
-merge m:1 hhid using `"`rawroot'/Lebanon/LBN_refugee_hhold.dta"', ///
+tempfile raw_household
+datalibweb, country(LBN) years(2023) type(FDPRAW) ///
+    surveyid(`dlw_surveyid') filename(LBN_refugee_hhold.dta) clear
+save `raw_household'
+datalibweb, country(LBN) years(2023) type(FDPRAW) ///
+    surveyid(`dlw_surveyid') filename(LBN_refugee_ind.dta) clear
+merge m:1 hhid using `raw_household', ///
     keep(3) nogen keepusing(consagg CAwosocialasst head_nationality hhsize)
 
 * refugees only: Syrian household head (head_nationality is numeric,

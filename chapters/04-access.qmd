@@ -52,20 +52,23 @@ Two clients are available: the [`datalibweb` Stata package](https://github.com/w
 
 ### Authentication
 
-Register the datalibweb token (from the datalibweb website) once every 30 days:
+Tokens are valid for 30 days. Renew them on the [datalibweb website](https://datalibweb2.worldbank.org). Do not commit tokens or put them in scripts.
 
 ::: {.panel-tabset group="language"}
 
 ## R
 
 ```r
-dlw_set_token("<your datalibweb token>")   # stored in the system keyring
+dlw_set_token("<your datalibweb token>")   # one-time setup; stored in the system keychain
 ```
+
+R reuses the saved token; run `dlw_set_token()` again only after renewal.
 
 ## Stata
 
 ```stata
 datalibweb, token(<your datalibweb token>) version(2)
+* one-time setup; do not hard-code it in a do-file.
 ```
 
 :::

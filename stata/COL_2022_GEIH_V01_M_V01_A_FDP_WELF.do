@@ -2,9 +2,8 @@
 COL_2022_GEIH_V01_M_V01_A_FDP_WELF.do
 50by35 pipeline — Step 2: harmonize Colombia GEIH 2022 to the 50by35 schema
 
-Inputs : $REFUGEE_RAW_DATA/Colombia/GEIH/individual_data_2022.dta
-         $REFUGEE_RAW_DATA/Colombia/GEIH/household_data_2022.dta
-         (or datalibweb's FDPRAW collection — see chapters/04-access.qmd)
+Inputs : datalibweb FDPRAW — GEIH individual_data_2022.dta,
+         household_data_2022.dta
 Output : ${FIFTYBY35_PROCESSED:-data/processed}/COL_2022_GEIH_V01_M_V01_A_FDP_WELF.dta
 
 Variable construction follows the WB-UNHCR Refugee Welfare Report
@@ -18,23 +17,27 @@ unit); annualized here per the schema. welfare_type = 2.
 version 18
 clear
 set more off
+capture log close _all
 
-* ---- raw data source ------------------------------------------------------
-* Reads from REFUGEE_RAW_DATA. The same files can also be fetched from
-* datalibweb's FDPRAW collection instead (see chapters/04-access.qmd,
-* requires the datalibweb Stata package + a registered token) — swap the
-* `use`/`merge...using` lines below for a datalibweb call if needed.
-local rawroot : env REFUGEE_RAW_DATA
-if `"`rawroot'"' == "" {
-    di as error "Set REFUGEE_RAW_DATA to the raw-data root folder"
+* ---- raw data source: datalibweb FDPRAW -------------------------------
+local dlw_token : env DLW_TOKEN
+if `"`dlw_token'"' == "" {
+    di as error "Set DLW_TOKEN in the Stata process environment"
     exit 601
 }
+quietly datalibweb, token(`dlw_token') version(2)
+local dlw_surveyid "COL_2022_GEIH_V01_M"
 local outdir : env FIFTYBY35_PROCESSED
 if `"`outdir'"' == "" local outdir "~/Github/50by35-data/data/processed"
 
 * ---- merge individual and household data ---------------------------------
-use `"`rawroot'/Colombia/GEIH/individual_data_2022.dta"', clear
-merge m:1 hhid using `"`rawroot'/Colombia/GEIH/household_data_2022.dta"', keep(3) nogen
+tempfile raw_household
+datalibweb, country(COL) years(2022) type(FDPRAW) ///
+    surveyid(`dlw_surveyid') filename(household_data_2022.dta) clear
+save `raw_household'
+datalibweb, country(COL) years(2022) type(FDPRAW) ///
+    surveyid(`dlw_surveyid') filename(individual_data_2022.dta) clear
+merge m:1 hhid using `raw_household', keep(3) nogen
 
 * refugees only: Venezuelan migrants, excluding the Colombia-born
 replace refugee = 0 if cbirth==170

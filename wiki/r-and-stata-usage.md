@@ -66,6 +66,33 @@ tabulate region
 
 ---
 
+## Installing `datalibweb`
+
+The `datalibweb` Stata package is included on World Bank computers with Stata.
+Outside that environment, install it only if you are authorized to use Datalibweb
+under the [upstream terms](https://github.com/worldbank/datalibweb#terms-of-use).
+
+1. Download the latest Stata package archive from
+   [`Stata/plus/d/datalibweb.zip`](https://github.com/worldbank/datalibweb/raw/refs/heads/master/Stata/plus/d/datalibweb.zip)
+   and extract it. The archive contains `plus/` and `personal/` folders.
+
+2. In Stata, run `sysdir` to find the `PLUS` and `PERSONAL` directories. Copy the
+   extracted `plus/` and `personal/` folders into those corresponding directories,
+   merging with existing folders if prompted. Preserve the folder structure.
+
+3. Restart Stata and verify the installation:
+
+   ```stata
+   which datalibweb
+   help datalibweb
+   ```
+
+To update, repeat these steps with the latest archive. The package uses Datalibweb
+2.0 by default; data access still requires an authorized account and permissions
+for the relevant collection.
+
+---
+
 ## Configuring Stata on Windows (Primary Setup)
 
 Quarto needs to know where your Stata executable is. There are two ways to do this.

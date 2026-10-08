@@ -3,10 +3,8 @@ CMR_2025_FDS_V01_M_V01_A_FDP_WELF.do
 50by35 pipeline — Step 2: harmonize Cameroon FDS (refugee welfare survey)
 2025 to the 50by35 schema
 
-Inputs : $REFUGEE_RAW_DATA/Cameroon/FDS_WR_Welfare_HH.dta
-         $REFUGEE_RAW_DATA/Cameroon/FDS_WR_BasicInf.dta
-         $REFUGEE_RAW_DATA/Cameroon/FDS_WR_Ind.dta
-         (or datalibweb's FDPRAW collection — see chapters/04-access.qmd)
+Inputs : datalibweb FDPRAW — FDS_WR_Welfare_HH.dta,
+         FDS_WR_BasicInf.dta, FDS_WR_Ind.dta
 Output : ${FIFTYBY35_PROCESSED:-data/processed}/CMR_2025_FDS_V01_M_V01_A_FDP_WELF.dta
 
 Variable construction follows the WB-UNHCR Refugee Welfare Report
@@ -30,22 +28,29 @@ welfare_type = 1.
 version 18
 clear
 set more off
+capture log close _all
 
-* ---- raw data source ------------------------------------------------------
-* Reads from REFUGEE_RAW_DATA. The same files can also be fetched from
-* datalibweb's FDPRAW collection instead (see chapters/04-access.qmd,
-* requires the datalibweb Stata package + a registered token) — swap the
-* `use`/`merge...using` lines below for a datalibweb call if needed.
-local rawroot : env REFUGEE_RAW_DATA
-if `"`rawroot'"' == "" {
-    di as error "Set REFUGEE_RAW_DATA to the raw-data root folder"
+* ---- raw data source: datalibweb FDPRAW -------------------------------
+local dlw_token : env DLW_TOKEN
+if `"`dlw_token'"' == "" {
+    di as error "Set DLW_TOKEN in the Stata process environment"
     exit 601
 }
+quietly datalibweb, token(`dlw_token') version(2)
+local dlw_surveyid "CMR_2025_FDS_V01_M"
 local outdir : env FIFTYBY35_PROCESSED
 if `"`outdir'"' == "" local outdir "~/Github/50by35-data/data/processed"
 
 * ---- household level ----------------------------------------------------
-use `"`rawroot'/Cameroon/FDS_WR_Welfare_HH.dta"', clear
+tempfile raw_basicinf raw_individual
+datalibweb, country(CMR) years(2025) type(FDPRAW) ///
+    surveyid(`dlw_surveyid') filename(FDS_WR_BasicInf.dta) clear
+save `raw_basicinf'
+datalibweb, country(CMR) years(2025) type(FDPRAW) ///
+    surveyid(`dlw_surveyid') filename(FDS_WR_Ind.dta) clear
+save `raw_individual'
+datalibweb, country(CMR) years(2025) type(FDPRAW) ///
+    surveyid(`dlw_surveyid') filename(FDS_WR_Welfare_HH.dta) clear
 
 * refugees only
 keep if pops==1
@@ -65,9 +70,9 @@ di as txt "Dropping " r(N) " observations with missing/zero consumption aggregat
 drop if missing(welfare) | welfare<=0 | missing(hhweight) | hhweight<=0
 
 * ---- merge household infrastructure + individuals -------------------------
-merge 1:1 hhid using `"`rawroot'/Cameroon/FDS_WR_BasicInf.dta"', ///
+merge 1:1 hhid using `raw_basicinf', ///
     keep(3) nogen keepusing(elec_ac)
-merge 1:m hhid using `"`rawroot'/Cameroon/FDS_WR_Ind.dta"', ///
+merge 1:m hhid using `raw_individual', ///
     keep(3) nogen keepusing(s01q04 s02q03 s02q11a emp01 emp02 emp03 emp04 emp05 Neduc_scol)
 
 * ---- schema variables ----------------------------------------------------

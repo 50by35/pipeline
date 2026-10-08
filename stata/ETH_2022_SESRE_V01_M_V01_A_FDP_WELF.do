@@ -3,10 +3,8 @@ ETH_2022_SESRE_V01_M_V01_A_FDP_WELF.do
 50by35 pipeline — Step 2: harmonize Ethiopia SESRE (Socioeconomic Survey
 of Refugees and Host Communities) 2022 to the 50by35 schema
 
-Inputs : $REFUGEE_RAW_DATA/Ethiopia/ETH_SESRE_consumption_hh_level.dta
-         $REFUGEE_RAW_DATA/Ethiopia/ETH_SESRE_household_level.dta
-         $REFUGEE_RAW_DATA/Ethiopia/ETH_SESRE_individual level.dta
-         (or datalibweb's FDPRAW collection — see chapters/04-access.qmd)
+Inputs : datalibweb FDPRAW — ETH_SESRE_consumption_hh_level.dta,
+         ETH_SESRE_household_level.dta, ETH_SESRE_individual level.dta
 Output : ${FIFTYBY35_PROCESSED:-data/processed}/ETH_2022_SESRE_V01_M_V01_A_FDP_WELF.dta
 
 Variable construction follows the WB-UNHCR Refugee Welfare Report
@@ -24,22 +22,29 @@ consistent with SESRE's own poverty methodology. welfare_type = 1.
 version 18
 clear
 set more off
+capture log close _all
 
-* ---- raw data source ------------------------------------------------------
-* Reads from REFUGEE_RAW_DATA. The same files can also be fetched from
-* datalibweb's FDPRAW collection instead (see chapters/04-access.qmd,
-* requires the datalibweb Stata package + a registered token) — swap the
-* `use`/`merge...using` lines below for a datalibweb call if needed.
-local rawroot : env REFUGEE_RAW_DATA
-if `"`rawroot'"' == "" {
-    di as error "Set REFUGEE_RAW_DATA to the raw-data root folder"
+* ---- raw data source: datalibweb FDPRAW -------------------------------
+local dlw_token : env DLW_TOKEN
+if `"`dlw_token'"' == "" {
+    di as error "Set DLW_TOKEN in the Stata process environment"
     exit 601
 }
+quietly datalibweb, token(`dlw_token') version(2)
+local dlw_surveyid "ETH_2022_SESRE_V01_M"
 local outdir : env FIFTYBY35_PROCESSED
 if `"`outdir'"' == "" local outdir "~/Github/50by35-data/data/processed"
 
 * ---- consumption (household level) ----------------------------------------
-use `"`rawroot'/Ethiopia/ETH_SESRE_consumption_hh_level.dta"', clear
+tempfile raw_household raw_individual
+datalibweb, country(ETH) years(2022) type(FDPRAW) ///
+    surveyid(`dlw_surveyid') filename("ETH_SESRE_household_level.dta") clear
+save `raw_household'
+datalibweb, country(ETH) years(2022) type(FDPRAW) ///
+    surveyid(`dlw_surveyid') filename("ETH_SESRE_individual level.dta") clear
+save `raw_individual'
+datalibweb, country(ETH) years(2022) type(FDPRAW) ///
+    surveyid(`dlw_surveyid') filename(ETH_SESRE_consumption_hh_level.dta) clear
 
 * refugees only: out-of-camp (2) or in-camp (3)
 keep if inlist(sample_type, 2, 3)
@@ -58,9 +63,9 @@ gen double welfare_self = max(total_exp_pre, 0)/hhsize
 replace    welfare_self = welfare if welfare_self > welfare & !missing(welfare)
 
 * ---- merge household roster + individuals ---------------------------------
-merge 1:1 household_id using `"`rawroot'/Ethiopia/ETH_SESRE_household_level.dta"', ///
+merge 1:1 household_id using `raw_household', ///
     keep(3) nogen keepusing(wq6901)
-merge 1:m household_id using `"`rawroot'/Ethiopia/ETH_SESRE_individual level.dta"', ///
+merge 1:m household_id using `raw_individual', ///
     keep(3) nogen
 
 * ---- schema variables ----------------------------------------------------

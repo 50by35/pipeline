@@ -38,6 +38,12 @@ Common conventions across all scripts:
 - **`arrival_year`** (optional): the individual's year of arrival in the host country. Leave missing when unavailable; do not infer it from duration-of-displacement unless the source definition supports that conversion.
 - **Sentinel codes** (e.g. `age == 9999`) are converted to system missing.
 
+
+::: {.callout-tip}
+## `DLW_TOKEN`
+The sample Stata harmonization scripts in this repository retrieve their raw inputs directly from the datalibweb **`FDPRAW`** collection. They use `DLW_TOKEN` from the environment to set the datalibweb token without exposing them. To set this up on **Windows:** use Start menu search for **Edit environment variables for your account**, add a user variable named `DLW_TOKEN` with your token, then restart Stata. Before running a script, confirm that you have access to the collection, a working datalibweb Stata package, and a valid token. See [Access Data](04-access.qmd) for more examples.
+:::
+
 After harmonizing, check the file against the schema before upload:
 
 ::: {.panel-tabset group="language"}
