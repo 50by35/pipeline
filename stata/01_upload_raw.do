@@ -3,7 +3,7 @@
 50by35 pipeline — Step 1: upload raw microdata via PRIMUS (Stata client)
 
 Requires: the primus Stata package (net install from
-          https://github.com/worldbank/primus-stata) and a registered
+          https://github.com/worldbank/primus) and a registered
           Datalibweb token (valid 30 days):
               primus register, token(<your Datalibweb token>)
 

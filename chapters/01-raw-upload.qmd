@@ -27,8 +27,20 @@ Upload the survey **documentation and questionnaires** together with the raw dat
 | `Data/Stata` | `dta` |
 :::
 
-Users can interact with PRIMUS via the [web interface](https://primusuiprod.ase.worldbank.org) or programmatically using the [`primus` Stata package](https://github.com/worldbank/primus-stata) (Windows) or the [`primus` R package](https://github.com/worldbank/primus-r) (cross-platform). Both call the same PRIMUS API; use whichever matches your harmonization workflow.
+Users can interact with PRIMUS via the [web interface](https://primusuiprod.ase.worldbank.org) or programmatically using the [`primus` Stata package](https://github.com/worldbank/primus) (Windows) or the [`primus` R package](https://github.com/worldbank/primus-r) (cross-platform). Both call the same PRIMUS API; use whichever matches your harmonization workflow.
 
+::: {.callout-note}
+## Install a client
+
+- **R:** `worldbank/primus-r` is private. World Bank GitHub members need a PAT for `primus-r` with **Contents: Read-only** (complete any required SSO authorization or token approval). Store it as `GITHUB_PAT` in `~/.Renviron`, restart R, then run:
+
+  ```r
+  install.packages("pak")
+  pak::pak("worldbank/primus-r")
+  ```
+
+- **Stata (Windows):** Download and extract the [PRIMUS repository](https://github.com/worldbank/primus). In Stata, run `sysdir`; copy the *contents* of `Stata/plus/p` into a `p` folder under the `PLUS` directory. Restart Stata and verify with `which primus`.
+:::
 
 ### Authentication
 
