@@ -134,7 +134,7 @@ label variable weight       "Sampling weight"
 label variable camp         "Camp/non-camp"
 label variable urban        "Urban/rural"
 label variable hhsize       "Household size"
-label variable age          "Age"
+label variable age          "Age (years)"
 label variable educat4      "Highest education (4 cat.)"
 label variable empstat      "Employment status"
 

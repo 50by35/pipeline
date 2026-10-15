@@ -70,7 +70,9 @@ tostring hhid, replace
 tostring pid, replace
 
 gen byte   welfare_type = 1
-* weight: HH weight already named `weight` from the individual file
+* weight: HH weight already named `weight` from the individual file; stored
+* as float in the source, recast to double per the schema (values unchanged)
+recast double weight
 
 * camp: source urban already folds camp in as category 2
 gen byte camp2 = (urban==2)
@@ -116,7 +118,7 @@ label variable weight       "Sampling weight"
 label variable camp         "Camp/non-camp"
 label variable urban        "Urban/rural"
 label variable hhsize       "Household size"
-label variable age          "Age"
+label variable age          "Age (years)"
 label variable educat4      "Highest education (4 cat.)"
 label variable empstat      "Employment status"
 

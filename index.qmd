@@ -63,23 +63,35 @@ See the [Access Data](chapters/04-access.qmd) chapter for details.
 
 ## Harmonized Schema
 
-Every harmonized file must conform to the [50by35 schema](chapters/05-schema.qmd). Two variables in the microdata are used to calculate the 50by35 self-reliance indicator:
+Every harmonized file must conform to the [50by35 schema](chapters/05-schema.qmd). These variables in the microdata are used to calculate the 50by35 self-reliance indicator:
 
 | Variable | Status | Description |
 |---|---|---|
 | `welfare_self` | **Mandatory** | Self-reliance-adjusted welfare measure |
 | `weight` | **Mandatory** | Sampling weight |
+| `natpovline` | Optional | National poverty line; when available |
+| `camp` | **Mandatory** (missing allowed) | Camp/non-camp status |
 
 
 See the [Schema & Variable Dictionary](chapters/05-schema.qmd) for the full variable list,
 value ranges, and labeling conventions.
 
 ## Calculating the 50by35 Self-Reliance Indicator from Harmonized Microdata
-The share of the population defined as self-reliant can be calculated as follows:
+The share of the population defined as self-reliant can be calculated using the **national poverty line** when the harmonized file includes `natpovline`. This is the **primary** 50by35 self-reliance indicator:
 
 $$
-SR = \frac{\displaystyle\sum_{i=1}^{n} \mathbb{1}\left[\dfrac{\text{welfare\_self}_i}{365 \times CPI \times PPP} \geq z\right] \cdot \text{weight}_i}{\displaystyle\sum_{i=1}^{n} \text{weight}_i}
+SR^{nat} = \frac{\displaystyle\sum_{i=1}^{n} \mathbb{1}\left[\text{welfare\_self}_i \geq \text{natpovline}_i\right] \cdot \text{weight}_i}{\displaystyle\sum_{i=1}^{n} \text{weight}_i}
 $$
 
-where $z$ is the reference poverty line (in daily PPP terms), $\mathbb{1}[\cdot]$ is an indicator function equal to 1 if the condition holds and 0 otherwise, `welfare_self` is divided by 365 to convert the annual adjusted welfare aggregate to a daily rate, and the sums run over all $n$ individuals $i$ in the sample. CPI and PPP are the consumer price index and purchasing power parity adjustment factors, respectively, since `welfare_self` is expressed in current local currency units.
+where $\mathbb{1}[\cdot]$ is an indicator function equal to 1 if the condition holds and 0 otherwise, and the sums run over all $n$ individuals $i$ in the sample. `welfare_self` and `natpovline` are both annual per capita local currency units, so no price conversion is needed.
+
+The indicator can also be calculated against an international line, $z = \$3.00$/day 2021 PPP when no national line is available:
+
+$$
+SR^{intl} = \frac{\displaystyle\sum_{i=1}^{n} \mathbb{1}\left[\dfrac{\text{welfare\_self}_i}{365 \times CPI \times PPP} \geq z\right] \cdot \text{weight}_i}{\displaystyle\sum_{i=1}^{n} \text{weight}_i}
+$$
+
+where `welfare_self` is divided by 365 to convert the annual adjusted welfare aggregate to a daily rate. CPI and PPP are the consumer price index and purchasing power parity adjustment factors, respectively, since `welfare_self` is expressed in current local currency units.
+
+Both indicators are reported for the whole sample and by camp status, by restricting the sums to individuals with `camp == 0` or `camp == 1`.
 

@@ -29,12 +29,9 @@ validate_50by35 <- function(df) {
   numeric_vars <- c("year", "welfare", "welfare_type", "welfare_self", "weight", "camp", "urban")
   for (v in numeric_vars)
     if (!is.numeric(df[[v]])) fail(v, " must be numeric")
-  integer_vars <- c("year", "welfare_type", "camp", "urban")
-  for (v in intersect(integer_vars, names(df)))
-    if (!is.integer(df[[v]])) fail(v, " must use an integer storage type")
-  double_vars <- c("welfare", "welfare_self", "weight")
-  for (v in double_vars)
-    if (typeof(df[[v]]) != "double") fail(v, " must use double storage")
+  # Stata storage types (integer types vs. no float) are checked only in
+  # Stata/validate_50by35.do: haven::read_dta() reads every Stata numeric
+  # as double, so R can check values but not storage.
 
   # missing values (camp/urban may be missing)
   for (v in c("year", "welfare", "welfare_type", "welfare_self", "weight"))
@@ -69,7 +66,6 @@ validate_50by35 <- function(df) {
 
   # optional variables, when present
   if ("hhsize" %in% names(df)) {
-    if (!is.integer(df$hhsize)) fail("hhsize must use an integer storage type")
     if (any(df$hhsize < 1 | df$hhsize != floor(df$hhsize), na.rm = TRUE))
       fail("hhsize must be an integer of at least 1")
     # mismatch with the person-record count is a warning: rosters can be
@@ -81,7 +77,6 @@ validate_50by35 <- function(df) {
               n_bad, " rows (incomplete roster?)")
   }
   if ("age" %in% names(df)) {
-    if (typeof(df$age) != "double") fail("age must use double storage")
     if (any(df$age < 0 | df$age > 120 | (df$age >= 5 & df$age != floor(df$age)), na.rm = TRUE))
       fail("age outside 0-120 or non-integer for age 5 and above")
   }
@@ -91,21 +86,52 @@ validate_50by35 <- function(df) {
     fail("educat4 outside 1-4")
   if ("empstat" %in% names(df) && !all(df$empstat %in% c(1:4, NA)))
     fail("empstat outside 1-4")
-  for (v in intersect(c("strata", "psu"), names(df))) {
-    if (!is.integer(df[[v]])) fail(v, " must use an integer storage type")
+  for (v in intersect(c("strata", "psu"), names(df)))
     if (any(df[[v]] != floor(df[[v]]), na.rm = TRUE)) fail(v, " must contain integers")
-  }
-  for (v in intersect(c("male", "educat4", "empstat"), names(df))) {
-    if (!is.integer(df[[v]])) fail(v, " must use an integer storage type")
+  for (v in intersect(c("male", "educat4", "empstat"), names(df)))
     if (any(df[[v]] != floor(df[[v]]), na.rm = TRUE)) fail(v, " must contain integer codes")
-  }
+  # natpovline is optional, but when present it drives the primary
+  # self-reliance indicator, so every row must have a value
   if ("natpovline" %in% names(df) &&
-      (typeof(df$natpovline) != "double" || any(df$natpovline <= 0, na.rm = TRUE)))
-    fail("natpovline must use double storage and be positive")
+      (anyNA(df$natpovline) || any(df$natpovline <= 0)))
+    fail("natpovline must be positive and non-missing in every row")
   if ("arrival_year" %in% names(df) &&
-      (!is.integer(df$arrival_year) || any(df$arrival_year < 1900 | df$arrival_year > df$year |
-            df$arrival_year != floor(df$arrival_year), na.rm = TRUE)))
-    fail("arrival_year must use integer storage and be from 1900 through survey year")
+      any(df$arrival_year < 1900 | df$arrival_year > df$year |
+            df$arrival_year != floor(df$arrival_year), na.rm = TRUE))
+    fail("arrival_year must be an integer year from 1900 through survey year")
+
+  # variable labels (warning only): expected text is the Label column of
+  # chapters/05-schema.qmd. Labels document the file and do not affect the
+  # indicators, so a mismatch is a warning, not an error.
+  expected_var_labels <- c(
+    code         = "Country code",
+    year         = "Survey year",
+    survname     = "Survey name",
+    hhid         = "Household identifier",
+    pid          = "Person identifier",
+    welfare      = "Welfare aggregate (LCU, annual per capita)",
+    welfare_self = "Self-reliance-adjusted welfare (LCU, annual per capita)",
+    welfare_type = "Welfare measure type",
+    weight       = "Sampling weight",
+    camp         = "Camp/non-camp",
+    urban        = "Urban/rural",
+    hhsize       = "Household size",
+    age          = "Age (years)",
+    male         = "Sex",
+    educat4      = "Highest education (4 cat.)",
+    empstat      = "Employment status",
+    strata       = "Sampling strata",
+    psu          = "Primary sampling unit",
+    natpovline   = "National poverty line (LCU, annual per capita)",
+    arrival_year = "Year of arrival"
+  )
+  for (v in intersect(names(expected_var_labels), names(df))) {
+    actual <- attr(df[[v]], "label")
+    if (is.null(actual)) actual <- ""
+    if (actual != expected_var_labels[[v]])
+      message("SCHEMA WARNING: ", v, " variable label is \"", actual,
+              "\", expected \"", expected_var_labels[[v]], "\"")
+  }
 
   message("50by35 schema validation PASSED (", nrow(df), " observations)")
   invisible(TRUE)

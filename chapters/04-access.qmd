@@ -166,7 +166,7 @@ datalibweb, country(COL) years(2023) type(FDPRAW) ///
 
 ```r
 library(dlw)
-library(pipr)
+source("R/utils.R")   # dlw_support_tables(), dlw_cpi_ppp(); run from the repository root
 
 # harmonized 50by35 welfare module (WELF) from the FDP collection
 
@@ -177,23 +177,17 @@ welf <- dlw_get_data(
   year         = 2023
 )
 
-# CPI and PPP conversion factors from PIP (public)
-cpi_pip <- get_aux("cpi", ppp_version = 2021)
-ppp_pip <- get_aux("ppp", ppp_version = 2021)
-
 # calculate SR indicator ----
 
 ccode <- welf$code[1]
 yr    <- welf$year[1]
 
-# CPI: ratio normalized to 1 in the PPP base year (2021), for the survey year
-cpi_value <- cpi_pip$value[cpi_pip$country_code == ccode &
-                             cpi_pip$year == yr &
-                             cpi_pip$data_level == "national"]
-
-# PPP: ICP 2021 conversion factor (LCU per international $)
-ppp_value <- ppp_pip$value[ppp_pip$country_code == ccode &
-                             ppp_pip$data_level == "national"]
+# CPI and PPP from the latest datalibweb Support files (2021 framework):
+# CPI is the survey-year CPI relative to 2021 (1 in 2021); PPP is the ICP 2021
+# conversion factor (LCU per international $).
+fx <- dlw_cpi_ppp(dlw_support_tables(), ccode, yr)
+cpi_value <- fx$cpi
+ppp_value <- fx$ppp
 
 # poverty line in $/day 2021 PPP (placeholder — pending confirmation)
 zline <- 3.00
@@ -212,14 +206,24 @@ headcount <- weighted.mean(
 
 sprintf("%s %d - Self-reliance share: %.4f  Headcount: %.4f ($%.2f/day 2021PPP)", ccode, yr, sr_share, headcount, zline)
 
-# optional national poverty headcount, if the national line is in the file
+# primary indicator: national poverty line, if natpovline is in the file.
+# natpovline shares welfare's annual per capita LCU basis, so no CPI/PPP.
 if ("natpovline" %in% names(welf)) {
-  national_headcount <- weighted.mean(
-    welf$welfare < welf$natpovline,
-    welf$weight,
-    na.rm = TRUE
-  )
-  sprintf("National poverty headcount: %.4f", national_headcount)
+  sr_share_nat <- weighted.mean(welf$welfare_self >= welf$natpovline, welf$weight)
+  headcount_nat <- weighted.mean(welf$welfare < welf$natpovline, welf$weight)
+  sprintf("National line - Self-reliance share (primary): %.4f  Headcount: %.4f",
+          sr_share_nat, headcount_nat)
+}
+
+# by camp status (camp may be missing for every row, e.g. in COL)
+camp <- as.integer(welf$camp)
+for (l in sort(unique(camp[!is.na(camp)]))) {
+  g <- welf[camp %in% l, ]
+  print(sprintf("camp==%d - Self-reliance share ($%.2f/day): %.4f", l, zline,
+                weighted.mean(g$welfare_self / 365 / cpi_value / ppp_value >= zline, g$weight)))
+  if ("natpovline" %in% names(g))
+    print(sprintf("camp==%d - Self-reliance share (national line): %.4f", l,
+                  weighted.mean(g$welfare_self >= g$natpovline, g$weight)))
 }
 ```
 
@@ -234,18 +238,14 @@ datalibweb, country(COL) years(2023) type(FDP) mod(WELF) clear
 local ccode = code[1]
 local year  = year[1]
 
-* CPI and PPP conversion factors from PIP (public)
-preserve
-pip tables, table(cpi) ppp_year(2021) clear
-keep if country_code=="`ccode'" & year==`year' & data_level=="national"
-local cpival = value[1]
-restore
-
-preserve
-pip tables, table(ppp) ppp_year(2021) clear
-keep if country_code=="`ccode'" & data_level=="national"
-local pppval = value[1]
-restore
+* CPI and PPP from the latest datalibweb Support files (2021 framework):
+* CPI is the survey-year CPI relative to 2021 (1 in 2021); PPP is the ICP 2021
+* conversion factor (LCU per international $). Needs the datalibweb token set
+* in Stata; run from the repository root.
+do "Stata/utils.do"
+dlw_cpi_ppp, country(`ccode') year(`year')
+local cpival = r(cpi)
+local pppval = r(ppp)
 
 * poverty line in $/day 2021 PPP (placeholder — pending confirmation)
 local zline 3.00
@@ -263,14 +263,32 @@ local hc : di %9.6f r(mean)
 drop _sr _poor
 di "`ccode' `year' - Self-reliance share: `sr'  Headcount: `hc' ($`zline'/day 2021PPP)"
 
-* optional national poverty headcount; natpovline shares welfare's LCU/time basis
+* primary indicator: national poverty line, if natpovline is in the file.
+* natpovline shares welfare's annual per capita LCU basis, so no CPI/PPP.
 capture confirm variable natpovline
 if !_rc {
-    gen byte _poor_nat = welfare < natpovline if !missing(natpovline)
+    gen byte _sr_nat = welfare_self >= natpovline
+    qui sum _sr_nat [aw=weight]
+    di "National line - Self-reliance share (primary): " %9.6f r(mean)
+    gen byte _poor_nat = welfare < natpovline
     qui sum _poor_nat [aw=weight]
-    di "National poverty headcount: " %9.6f r(mean)
-    drop _poor_nat
+    di "National line - Headcount: " %9.6f r(mean)
 }
+
+* by camp status (camp may be missing for every row, e.g. in COL)
+gen byte _sr = (welfare_self/365/`cpival'/`pppval') >= `zline'
+capture confirm variable _sr_nat
+local hasnat = !_rc
+qui levelsof camp, local(camplevels)
+foreach l of local camplevels {
+    qui sum _sr if camp==`l' [aw=weight]
+    di "camp==`l' - Self-reliance share ($`zline'/day): " %9.6f r(mean)
+    if `hasnat' {
+        qui sum _sr_nat if camp==`l' [aw=weight]
+        di "camp==`l' - Self-reliance share (national line): " %9.6f r(mean)
+    }
+}
+capture drop _sr _sr_nat _poor_nat
 ```
 
 :::

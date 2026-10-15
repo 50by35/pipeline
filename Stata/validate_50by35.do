@@ -48,24 +48,22 @@ foreach v in year welfare welfare_type welfare_self weight camp urban {
         exit 459
     }
 }
-foreach v in year {
+* Storage: integer variables may use any integer type (byte/int/long), since
+* -compress- picks the smallest exact type. Real-valued variables must not be
+* float, which keeps only ~7 significant digits; -compress- never demotes
+* double to float (it may demote integer-valued doubles to byte/int/long,
+* which is exact), so a float was created as float in the harmonization.
+foreach v in year welfare_type camp urban {
     local vtype : type `v'
-    if "`vtype'" != "int" {
-        di as error "SCHEMA ERROR: `v' must use int storage"
+    if !inlist("`vtype'", "byte", "int", "long") {
+        di as error "SCHEMA ERROR: `v' must use an integer storage type (byte/int/long)"
         exit 459
     }
 }
 foreach v in welfare welfare_self weight {
     local vtype : type `v'
-    if "`vtype'" != "double" {
-        di as error "SCHEMA ERROR: `v' must use double storage"
-        exit 459
-    }
-}
-foreach v in welfare_type camp urban {
-    local vtype : type `v'
-    if "`vtype'" != "byte" {
-        di as error "SCHEMA ERROR: `v' must use byte storage"
+    if "`vtype'" == "float" {
+        di as error "SCHEMA ERROR: `v' must not use float storage (use double)"
         exit 459
     }
 }
@@ -198,8 +196,8 @@ foreach v of local cats {
 capture confirm variable hhsize
 if !_rc {
     local vtype : type hhsize
-    if "`vtype'" != "int" {
-        di as error "SCHEMA ERROR: hhsize must use int storage"
+    if !inlist("`vtype'", "byte", "int", "long") {
+        di as error "SCHEMA ERROR: hhsize must use an integer storage type (byte/int/long)"
         exit 459
     }
     capture assert (hhsize >= 1 & hhsize==floor(hhsize)) | missing(hhsize)
@@ -222,8 +220,8 @@ if !_rc {
 capture confirm variable age
 if !_rc {
     local vtype : type age
-    if "`vtype'" != "double" {
-        di as error "SCHEMA ERROR: age must use double storage"
+    if "`vtype'" == "float" {
+        di as error "SCHEMA ERROR: age must not use float storage (use double)"
         exit 459
     }
     capture assert (inrange(age, 0, 120) & (age < 5 | age==floor(age))) | missing(age)
@@ -235,8 +233,8 @@ if !_rc {
 capture confirm variable male
 if !_rc {
     local vtype : type male
-    if "`vtype'" != "byte" {
-        di as error "SCHEMA ERROR: male must use byte storage"
+    if !inlist("`vtype'", "byte", "int", "long") {
+        di as error "SCHEMA ERROR: male must use an integer storage type (byte/int/long)"
         exit 459
     }
     capture assert inlist(male, 0, 1) | missing(male)
@@ -248,8 +246,8 @@ if !_rc {
 capture confirm variable educat4
 if !_rc {
     local vtype : type educat4
-    if "`vtype'" != "byte" {
-        di as error "SCHEMA ERROR: educat4 must use byte storage"
+    if !inlist("`vtype'", "byte", "int", "long") {
+        di as error "SCHEMA ERROR: educat4 must use an integer storage type (byte/int/long)"
         exit 459
     }
     capture assert (inrange(educat4, 1, 4) & educat4==floor(educat4)) | missing(educat4)
@@ -261,8 +259,8 @@ if !_rc {
 capture confirm variable empstat
 if !_rc {
     local vtype : type empstat
-    if "`vtype'" != "byte" {
-        di as error "SCHEMA ERROR: empstat must use byte storage"
+    if !inlist("`vtype'", "byte", "int", "long") {
+        di as error "SCHEMA ERROR: empstat must use an integer storage type (byte/int/long)"
         exit 459
     }
     capture assert (inrange(empstat, 1, 4) & empstat==floor(empstat)) | missing(empstat)
@@ -271,24 +269,26 @@ if !_rc {
         exit 459
     }
 }
+* natpovline is optional, but when present it drives the primary
+* self-reliance indicator, so every row must have a value
 capture confirm variable natpovline
 if !_rc {
     local vtype : type natpovline
-    if "`vtype'" != "double" {
-        di as error "SCHEMA ERROR: natpovline must use double storage"
+    if "`vtype'" == "float" {
+        di as error "SCHEMA ERROR: natpovline must not use float storage (use double)"
         exit 459
     }
-    capture assert natpovline > 0 | missing(natpovline)
+    capture assert natpovline > 0 & !missing(natpovline)
     if _rc {
-        di as error "SCHEMA ERROR: natpovline must be positive or missing"
+        di as error "SCHEMA ERROR: natpovline must be positive and non-missing in every row"
         exit 459
     }
 }
 capture confirm variable arrival_year
 if !_rc {
     local vtype : type arrival_year
-    if "`vtype'" != "int" {
-        di as error "SCHEMA ERROR: arrival_year must use int storage"
+    if !inlist("`vtype'", "byte", "int", "long") {
+        di as error "SCHEMA ERROR: arrival_year must use an integer storage type (byte/int/long)"
         exit 459
     }
     capture assert (inrange(arrival_year, 1900, year) & arrival_year==floor(arrival_year)) | missing(arrival_year)
@@ -300,17 +300,51 @@ if !_rc {
 foreach v in strata psu {
     capture confirm variable `v'
     if !_rc {
-        local expected_type "int"
-        if "`v'" == "psu" local expected_type "long"
         local vtype : type `v'
-        if "`vtype'" != "`expected_type'" {
-            di as error "SCHEMA ERROR: `v' must use `expected_type' storage"
+        if !inlist("`vtype'", "byte", "int", "long") {
+            di as error "SCHEMA ERROR: `v' must use an integer storage type (byte/int/long)"
             exit 459
         }
         capture assert `v'==floor(`v') | missing(`v')
         if _rc {
             di as error "SCHEMA ERROR: `v' must contain integers"
             exit 459
+        }
+    }
+}
+
+* ---- variable labels (warning only) -----------------------------------------
+* Expected text is the Label column of chapters/05-schema.qmd. Labels
+* document the file and do not affect the indicators, so a mismatch is a
+* warning, not an error.
+local lab_code         "Country code"
+local lab_year         "Survey year"
+local lab_survname     "Survey name"
+local lab_hhid         "Household identifier"
+local lab_pid          "Person identifier"
+local lab_welfare      "Welfare aggregate (LCU, annual per capita)"
+local lab_welfare_self "Self-reliance-adjusted welfare (LCU, annual per capita)"
+local lab_welfare_type "Welfare measure type"
+local lab_weight       "Sampling weight"
+local lab_camp         "Camp/non-camp"
+local lab_urban        "Urban/rural"
+local lab_hhsize       "Household size"
+local lab_age          "Age (years)"
+local lab_male         "Sex"
+local lab_educat4      "Highest education (4 cat.)"
+local lab_empstat      "Employment status"
+local lab_strata       "Sampling strata"
+local lab_psu          "Primary sampling unit"
+local lab_natpovline   "National poverty line (LCU, annual per capita)"
+local lab_arrival_year "Year of arrival"
+foreach v in code year survname hhid pid welfare welfare_self welfare_type ///
+             weight camp urban hhsize age male educat4 empstat strata psu ///
+             natpovline arrival_year {
+    capture confirm variable `v'
+    if !_rc {
+        local actual : variable label `v'
+        if `"`actual'"' != `"`lab_`v''"' {
+            di as txt `"SCHEMA WARNING: `v' variable label is "`actual'", expected "`lab_`v''""'
         }
     }
 }

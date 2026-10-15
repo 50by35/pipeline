@@ -1,13 +1,13 @@
 /* =====================================================================
-COL_2022_GEIH_V01_M_V01_A_FDP_WELF.do
-50by35 pipeline — Step 2: harmonize Colombia GEIH 2022 to the 50by35 schema
+COL_2023_GEIH_V01_M_V01_A_FDP_WELF.do
+50by35 pipeline — Step 2: harmonize Colombia GEIH 2023 to the 50by35 schema
 
-Inputs : datalibweb FDPRAW — GEIH individual_data_2022.dta,
-         household_data_2022.dta
-Output : ${FIFTYBY35_PROCESSED:-data/processed}/COL_2022_GEIH_V01_M_V01_A_FDP_WELF.dta
+Inputs : datalibweb FDPRAW — GEIH individual_data_2023.dta,
+         household_data_2023.dta
+Output : ${FIFTYBY35_PROCESSED:-data/processed}/COL_2023_GEIH_V01_M_V01_A_FDP_WELF.dta
 
 Variable construction follows the WB-UNHCR Refugee Welfare Report
-replicability package (harmonized.do, Colombia 2022 block).
+replicability package (harmonized.do, Colombia 2023 block).
 Sample: refugees only — Venezuelan migrants (refugee==1), excluding
 persons born in Colombia (cbirth==170).
 Welfare is INCOME (ingpcug, monthly per capita of the expenditure
@@ -26,17 +26,17 @@ if `"`dlw_token'"' == "" {
     exit 601
 }
 quietly datalibweb, token(`dlw_token') version(2)
-local dlw_surveyid "COL_2022_GEIH_V01_M"
+local dlw_surveyid "COL_2023_GEIH_V01_M"
 local outdir : env FIFTYBY35_PROCESSED
 if `"`outdir'"' == "" local outdir "~/Github/50by35-data/data/processed"
 
 * ---- merge individual and household data ---------------------------------
 tempfile raw_household
-datalibweb, country(COL) years(2022) type(FDPRAW) ///
-    surveyid(`dlw_surveyid') filename(household_data_2022.dta) clear
+datalibweb, country(COL) years(2023) type(FDPRAW) ///
+    surveyid(`dlw_surveyid') filename(household_data_2023.dta) clear
 save `raw_household'
-datalibweb, country(COL) years(2022) type(FDPRAW) ///
-    surveyid(`dlw_surveyid') filename(individual_data_2022.dta) clear
+datalibweb, country(COL) years(2023) type(FDPRAW) ///
+    surveyid(`dlw_surveyid') filename(individual_data_2023.dta) clear
 merge m:1 hhid using `raw_household', keep(3) nogen
 
 * refugees only: Venezuelan migrants, excluding the Colombia-born
@@ -116,7 +116,7 @@ label variable weight       "Sampling weight"
 label variable camp         "Camp/non-camp"
 label variable urban        "Urban/rural"
 label variable hhsize       "Household size"
-label variable age          "Age"
+label variable age          "Age (years)"
 label variable male         "Sex"
 label variable educat4      "Highest education (4 cat.)"
 label variable empstat      "Employment status"
@@ -128,5 +128,5 @@ order code year survname hhid pid welfare welfare_type welfare_self weight ///
 
 isid hhid pid
 compress
-save "`outdir'/COL_2022_GEIH_V01_M_V01_A_FDP_WELF.dta", replace
-di as result "Saved `outdir'/COL_2022_GEIH_V01_M_V01_A_FDP_WELF.dta (`=_N' refugees)"
+save "`outdir'/COL_2023_GEIH_V01_M_V01_A_FDP_WELF.dta", replace
+di as result "Saved `outdir'/COL_2023_GEIH_V01_M_V01_A_FDP_WELF.dta (`=_N' refugees)"
