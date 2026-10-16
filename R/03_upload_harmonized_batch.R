@@ -4,9 +4,9 @@
 # upload harmonized files for multiple surveys via PRIMUS (R client).
 #
 # Workflow:
-#   1. Scans data/processed/ for *_WELF.dta files and matches each to
-#      a Stata/*_WELF.do harmonization script.
-#   2. Writes batch/03_harmonized_uploads.csv with the discovered
+#   1. Scans the staging folder (outdir) for *_WELF.dta files and matches
+#      each to a Stata/*_WELF.do harmonization script.
+#   2. Writes <outdir>/manifests/03_harmonized_uploads.csv with the discovered
 #      surveys. Edit the CSV to remove rows, add cpi/ppp overrides,
 #      etc. before the script proceeds.
 #   3. Reads the CSV back and processes each row.
@@ -21,10 +21,12 @@ library(haven)
 source("R/validate_50by35.R")
 source("R/utils.R")
 
-outdir        <- Sys.getenv("FIFTYBY35_PROCESSED", "data/processed")
+# staging folder with the harmonized _WELF.dta files: edit this line
+outdir        <- "C:/path/to/staging"
 process_name  <- "FDP-harmonized-data"
 zline         <- 3.00  # placeholder poverty line, $/day 2021 PPP
-manifest_file <- "batch/03_harmonized_uploads.csv"
+manifest_file <- file.path(outdir, "manifests", "03_harmonized_uploads.csv")
+dir.create(dirname(manifest_file), recursive = TRUE, showWarnings = FALSE)
 
 # ---- auto-generate manifest from processed .dta files ------------------------
 dta_files <- list.files(outdir, pattern = "_WELF\\.dta$", full.names = FALSE)

@@ -28,8 +28,8 @@ version 18
 clear
 set more off
 
-* folder that holds your harmonized _WELF.dta files: edit this line
-local outdir "C:/path/to/processed"
+* staging folder with the harmonized _WELF.dta file (the XML is written here too): edit this line
+local outdir "C:/path/to/staging"
 
 * ---- parameters: uncomment ONE survey block ------------------------------
 local processid 40                       // FDP-harmonized-data

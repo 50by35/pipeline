@@ -68,10 +68,7 @@ docs/
 # NOTE: Do NOT add _freeze/ — frozen Stata outputs must be committed
 
 # Data (never commit raw or processed microdata)
-data/raw/*
-data/processed/*
-!data/raw/.gitkeep
-!data/processed/.gitkeep
+data/
 
 # Personal scratch space (not part of the book or pipeline)
 sandbox/

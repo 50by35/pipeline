@@ -36,7 +36,8 @@ library(haven)
 source("R/validate_50by35.R")
 source("R/utils.R")
 
-outdir <- Sys.getenv("FIFTYBY35_PROCESSED", "data/processed")
+# staging folder with the harmonized _WELF.dta files (the XML is written here too): edit this line
+outdir <- "C:/path/to/staging"
 
 # ---- parameters: pick ONE survey block --------------------------------------
 process_name <- "FDP-harmonized-data"

@@ -27,8 +27,8 @@ capture log close _all
 * ---- raw data source: datalibweb FDPRAW -------------------------------
 * requires the datalibweb token to be set in the datalibweb package (see Access Data)
 local dlw_surveyid "CHL_2022_CASEN_V01_M"
-* folder where the harmonized _WELF.dta is saved: edit this line
-local outdir "C:/path/to/processed"
+* staging folder where the harmonized _WELF.dta is saved: edit this line
+local outdir "C:/path/to/staging"
 
 datalibweb, country(CHL) years(2022) type(FDPRAW) ///
     surveyid(`dlw_surveyid') filename("Base de datos Casen 2022 STATA_18 marzo 2024.dta") clear

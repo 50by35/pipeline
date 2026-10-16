@@ -12,8 +12,8 @@
 
 library(primus)
 
-rawroot <- Sys.getenv("REFUGEE_RAW_DATA")
-if (rawroot == "") stop("Set REFUGEE_RAW_DATA to the raw-data root folder")
+# folder that holds your raw data files: edit this line
+rawroot <- "C:/path/to/raw-data"
 
 # ---- parameters: pick ONE survey block -------------------------------------
 process_name <- "FDPRaw-data"

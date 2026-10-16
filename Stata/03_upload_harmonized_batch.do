@@ -4,9 +4,9 @@
 upload harmonized files for multiple surveys via PRIMUS (Stata client).
 
 Workflow:
-  1. Scans data/processed/ for *_WELF.dta files and matches each to
-     a Stata/*_WELF.do harmonization script.
-  2. Writes batch/03_harmonized_uploads.csv with the discovered
+  1. Scans the staging folder (outdir) for files ending in _WELF.dta and
+     matches each to its harmonization script, Stata/<survey ID>_WELF.do.
+  2. Writes `outdir'/manifests/03_harmonized_uploads.csv with the discovered
      surveys. Edit the CSV to remove rows, add cpi/ppp overrides,
      etc. before the script proceeds.
   3. Reads the CSV back and processes each row.
@@ -18,12 +18,14 @@ version 18
 clear
 set more off
 
-* folder that holds your harmonized _WELF.dta files: edit this line
-local outdir "C:/path/to/processed"
+* staging folder with the harmonized _WELF.dta files (XML and manifest are written
+* here too): edit this line
+local outdir "C:/path/to/staging"
 
 local processid 40                       // FDP-harmonized-data
 local zline     3.00                     // placeholder poverty line, $/day 2021 PPP
-local manifest  "batch/03_harmonized_uploads.csv"
+capture mkdir "`outdir'/manifests"
+local manifest  "`outdir'/manifests/03_harmonized_uploads.csv"
 
 * ---- auto-generate manifest from processed .dta files ------------------------
 local dtafiles : dir "`outdir'" files "*_WELF.dta"

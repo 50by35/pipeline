@@ -22,8 +22,8 @@ capture log close _all
 * ---- raw data source: datalibweb FDPRAW -------------------------------
 * requires the datalibweb token to be set in the datalibweb package (see Access Data)
 local dlw_surveyid "NER_2018_EHCVM_V01_M"
-* folder where the harmonized _WELF.dta is saved: edit this line
-local outdir "C:/path/to/processed"
+* staging folder where the harmonized _WELF.dta is saved: edit this line
+local outdir "C:/path/to/staging"
 
 * ---- household level ----------------------------------------------------
 tempfile raw_individual
