@@ -18,8 +18,8 @@ version 18
 clear
 set more off
 
-local outdir : env FIFTYBY35_PROCESSED
-if `"`outdir'"' == "" local outdir "~/Github/50by35-data/data/processed"
+* folder that holds your harmonized _WELF.dta files: edit this line
+local outdir "C:/path/to/processed"
 
 local processid 40                       // FDP-harmonized-data
 local zline     3.00                     // placeholder poverty line, $/day 2021 PPP

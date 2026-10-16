@@ -5,7 +5,7 @@ surveys via PRIMUS (Stata client).
 
 Reads batch/01_raw_uploads.csv with columns:
   survey_id  — e.g. "COL_2023_GEIH_V01_M"
-  files      — semicolon-separated paths relative to $REFUGEE_RAW_DATA
+  files      — semicolon-separated paths relative to rawroot (set below)
   docs       — (optional) semicolon-separated doc paths
 
 Failures are logged and skipped; a summary is printed at the end.
@@ -15,11 +15,8 @@ version 18
 clear
 set more off
 
-local rawroot : env REFUGEE_RAW_DATA
-if `"`rawroot'"' == "" {
-    di as error "Set REFUGEE_RAW_DATA to the raw-data root folder"
-    exit 601
-}
+* folder that holds your raw data files: edit this line
+local rawroot "C:/path/to/raw-data"
 
 local processid 39                       // FDPRaw-data
 

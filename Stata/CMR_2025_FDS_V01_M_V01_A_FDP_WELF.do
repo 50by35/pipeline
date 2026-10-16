@@ -5,7 +5,7 @@ CMR_2025_FDS_V01_M_V01_A_FDP_WELF.do
 
 Inputs : datalibweb FDPRAW — FDS_WR_Welfare_HH.dta,
          FDS_WR_BasicInf.dta, FDS_WR_Ind.dta
-Output : ${FIFTYBY35_PROCESSED:-data/processed}/CMR_2025_FDS_V01_M_V01_A_FDP_WELF.dta
+Output : <outdir>/CMR_2025_FDS_V01_M_V01_A_FDP_WELF.dta
 
 Variable construction follows the WB-UNHCR Refugee Welfare Report
 replicability package (harmonized.do, Cameroon block), with welfare_self
@@ -31,15 +31,10 @@ set more off
 capture log close _all
 
 * ---- raw data source: datalibweb FDPRAW -------------------------------
-local dlw_token : env DLW_TOKEN
-if `"`dlw_token'"' == "" {
-    di as error "Set DLW_TOKEN in the Stata process environment"
-    exit 601
-}
-quietly datalibweb, token(`dlw_token') version(2)
+* requires the datalibweb token to be set in the datalibweb package (see Access Data)
 local dlw_surveyid "CMR_2025_FDS_V01_M"
-local outdir : env FIFTYBY35_PROCESSED
-if `"`outdir'"' == "" local outdir "~/Github/50by35-data/data/processed"
+* folder where the harmonized _WELF.dta is saved: edit this line
+local outdir "C:/path/to/processed"
 
 * ---- household level ----------------------------------------------------
 tempfile raw_basicinf raw_individual

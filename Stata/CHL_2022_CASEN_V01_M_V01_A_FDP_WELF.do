@@ -3,7 +3,7 @@ CHL_2022_CASEN_V01_M_V01_A_FDP_WELF.do
 50by35 pipeline — Step 2: harmonize Chile CASEN 2022 to the 50by35 schema
 
 Inputs : datalibweb FDPRAW — Base de datos Casen 2022 STATA_18 marzo 2024.dta
-Output : ${FIFTYBY35_PROCESSED:-data/processed}/CHL_2022_CASEN_V01_M_V01_A_FDP_WELF.dta
+Output : <outdir>/CHL_2022_CASEN_V01_M_V01_A_FDP_WELF.dta
 
 Variable construction follows the WB-UNHCR Refugee Welfare Report
 replicability package (harmonized.do, Chile block), with welfare_self
@@ -25,15 +25,10 @@ set more off
 capture log close _all
 
 * ---- raw data source: datalibweb FDPRAW -------------------------------
-local dlw_token : env DLW_TOKEN
-if `"`dlw_token'"' == "" {
-    di as error "Set DLW_TOKEN in the Stata process environment"
-    exit 601
-}
-quietly datalibweb, token(`dlw_token') version(2)
+* requires the datalibweb token to be set in the datalibweb package (see Access Data)
 local dlw_surveyid "CHL_2022_CASEN_V01_M"
-local outdir : env FIFTYBY35_PROCESSED
-if `"`outdir'"' == "" local outdir "~/Github/50by35-data/data/processed"
+* folder where the harmonized _WELF.dta is saved: edit this line
+local outdir "C:/path/to/processed"
 
 datalibweb, country(CHL) years(2022) type(FDPRAW) ///
     surveyid(`dlw_surveyid') filename("Base de datos Casen 2022 STATA_18 marzo 2024.dta") clear
