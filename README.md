@@ -14,10 +14,10 @@ The rendered book is available at:
 | `chapters/` | Book chapters as `.qmd` files |
 | `R/` | R scripts and functions |
 | `Stata/` | Stata do-files |
-| `data/raw/` | Raw data (not committed) |
-| `data/processed/` | Processed/derived data (not committed) |
 | `wiki/` | Contributor guides and documentation |
 | `.github/workflows/` | CI/CD pipeline for GitHub Pages |
+
+Data is not stored in this repository. The upload scripts read and write harmonized files, indicator XML and batch manifests in a local **staging folder** that you set in each script (the `outdir` line), outside the repository.
 
 ## Quick Start for Contributors
 

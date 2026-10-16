@@ -46,9 +46,9 @@ datalibweb, token(<your datalibweb token>)
 You need:
 
 - **A survey ID** in the form `CCC_YYYY_SSSS_V01_M_V01_A_FDP`: the raw survey ID, then the harmonization version and `FDP` (for example `COL_2023_GEIH_V01_M_V01_A_FDP`).
-- **The harmonized file**, named `<survey ID>_WELF.dta`, which follows the [schema](05-schema.qmd). Save it in a folder of its own.
+- **The harmonized file**, named `<survey ID>_WELF.dta`, which follows the [schema](05-schema.qmd). Save it in your **staging folder**: a folder on your computer, outside the repository, where the harmonized files are kept before upload. The upload scripts also write the indicator `.xml` there, and the batch scripts keep their manifest CSVs in a `manifests` subfolder.
 - **Your harmonization script**, named `<survey ID>_WELF.do` (or `.R` / `.py`) and saved in the `Stata/` folder of the repository. It is uploaded with the data so the harmonization can be reproduced.
-- **The folder with the harmonized files.** In Stata, edit the `local outdir` line at the top of the script. In R, set the `FIFTYBY35_PROCESSED` environment variable (on Windows, use Start menu search for **Edit environment variables for your account**, add a user variable with that name, then restart R) or edit the default folder on the `outdir` line of the script.
+- **The staging folder path.** In both the R and the Stata script, edit the `outdir` line at the top (`outdir <- "..."` in R, `local outdir "..."` in Stata) to point to your staging folder. Use forward slashes, for example `C:/Users/you/OneDrive/REFUGEE/staging`. The harmonization scripts have the same `outdir` line, so they save the file where the upload expects it.
 
 The script rejects files that do not follow the [schema](05-schema.qmd). Run the validation on its own first if you want to fix problems before uploading (see [Harmonization](02-harmonization.qmd)).
 
@@ -87,6 +87,15 @@ To upload many surveys in one run, use `R/03_upload_harmonized_batch.R` or `Stat
 ::: {.callout-tip}
 ## Practice first (draft only)
 To try the upload without sending it to approvers, delete the last step before running: the `primus_confirm(...)` line in R, or the `primus action ... decision(confirm)` command in Stata. The transaction then stays a private **draft** that approvers cannot see. You can view and delete it in the [PRIMUS web interface](https://primusuiprod.ase.worldbank.org); the R and Stata packages cannot delete a draft.
+:::
+
+::: {.callout-note}
+## Uploading in the PRIMUS web interface
+You can also upload through the [PRIMUS web interface](https://primusuiprod.ase.worldbank.org) (process `FDP-harmonized-data`, **Upload File(s)**). The form asks for the transaction ID (optional), country, year, survey acronym and the master and adaptation versions, then takes the **XML** and the files: the `.dta` in `Data/Harmonized` and the harmonization script in `Programs`. A transaction can hold up to 1.5 GB.
+
+The **R and Stata clients are still preferred**: one script validates, builds the XML and uploads everything in a single run, so there is less room for manual error, and the batch scripts handle many surveys.
+
+If you use the web interface, you still have to **validate the file and create the XML with the code in this repository first**. Run the validation and XML-creation steps (steps 1 to 3 of the annotated script under [How it works](#sec-harm-how)), then upload the resulting `.xml` together with the data and script in the web form. The web form does not validate the data or calculate the indicators.
 :::
 
 ### Step 4. Check the result {#sec-harm-check}
@@ -181,9 +190,12 @@ library(haven)
 source("R/validate_50by35.R")
 source("R/utils.R")
 survey_id <- "COL_2023_GEIH_V01_M_V01_A_FDP"
+outdir    <- "C:/path/to/staging"   # staging folder with the harmonized file
+dta_file  <- file.path(outdir, paste0(survey_id, "_WELF.dta"))
+xml_file  <- file.path(outdir, paste0(survey_id, ".xml"))
 
 # 1. Validate: any schema violation stops before upload
-df <- read_dta(paste0("data/processed/", survey_id, "_WELF.dta"))
+df <- read_dta(dta_file)
 validate_50by35(df)
 
 ccode <- df$code[1]
@@ -199,16 +211,16 @@ fx <- dlw_cpi_ppp(dlw_support_tables(), ccode, yr)
 #    (primary, if natpovline is in the file) and at $3.00/day 2021 PPP
 #    (placeholder, pending confirmation from the 50by35 methodology
 #    team), for the whole sample and by camp.
-ind <- write_indicator_xml(df, "indicator.xml", survey_id, fx$cpi, fx$ppp,
+ind <- write_indicator_xml(df, xml_file, survey_id, fx$cpi, fx$ppp,
                            zline = 3.00)
 ind$primary      # "National" or "International"
 ind$sr_primary   # headline self-reliance share
 
 # 4. The XML opens the transaction; then attach the data and programs
 up <- primus_upload("FDP-harmonized-data", survey_id, type = "harmonized",
-                    infile = "indicator.xml", xml = "indicator.xml")
+                    infile = xml_file, xml = xml_file)
 primus_upload("FDP-harmonized-data", survey_id, type = "harmonized",
-              infile = paste0("data/processed/", survey_id, "_WELF.dta"),
+              infile = dta_file,
               folder_name = "Data/Harmonized", transaction_id = up$transaction_id)
 primus_upload("FDP-harmonized-data", survey_id, type = "harmonized",
               infile = "Stata/COL_2023_GEIH_V01_M_V01_A_FDP_WELF.do",
@@ -222,9 +234,10 @@ primus_confirm(up$transaction_id, comments = "harmonized data ready for review")
 
 ```stata
 local surveyid "COL_2023_GEIH_V01_M_V01_A_FDP"
+local outdir   "C:/path/to/staging"    // staging folder with the harmonized file
 
 * 1. Validate: any schema violation stops before upload
-use "data/processed/`surveyid'_WELF.dta", clear
+use "`outdir'/`surveyid'_WELF.dta", clear
 do "Stata/validate_50by35.do"
 do "Stata/utils.do"
 
@@ -242,18 +255,18 @@ local pppval = r(ppp)
 *    (primary, if natpovline is in the file) and at $3.00/day 2021 PPP
 *    (placeholder, pending confirmation from the 50by35 methodology
 *    team), for the whole sample and by camp
-sr_indicator_xml using "`surveyid'.xml", surveyid(`surveyid') ///
+sr_indicator_xml using "`outdir'/`surveyid'.xml", surveyid(`surveyid') ///
     cpi(`cpival') ppp(`pppval') zline(3.00)
 di "`r(primary)' line self-reliance share: " %8.6f r(sr_primary)
 
 * 4. The XML opens the transaction (xmlbl flag); the transaction ID is
 *    returned in r(prmTransId). Then attach the data and programs.
 primus upload, processid(40) surveyid(`surveyid') ///
-    type(harmonized) infile("`surveyid'.xml") xmlbl new
+    type(harmonized) infile("`outdir'/`surveyid'.xml") xmlbl new
 local tranxid = r(prmTransId)
 
 primus upload, proc(40) surveyid(`surveyid') type(harmonized) ///
-    folderpath(Data/Harmonized) infile("data/processed/`surveyid'_WELF.dta") tranxid(`tranxid')
+    folderpath(Data/Harmonized) infile("`outdir'/`surveyid'_WELF.dta") tranxid(`tranxid')
 
 primus upload, proc(40) surveyid(`surveyid') type(harmonized) ///
     folderpath(Programs) infile("Stata/COL_2023_GEIH_V01_M_V01_A_FDP_WELF.do") tranxid(`tranxid')

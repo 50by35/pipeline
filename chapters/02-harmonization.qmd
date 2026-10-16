@@ -77,14 +77,14 @@ After harmonizing, check the file against the schema before upload. The upload s
 library(haven)
 source("R/validate_50by35.R")
 
-df <- read_dta("data/processed/<SurveyID>_WELF.dta")
+df <- read_dta("<staging folder>/<SurveyID>_WELF.dta")
 validate_50by35(df)
 ```
 
 ## Stata
 
 ```stata
-use "data/processed/<SurveyID>_WELF.dta", clear
+use "<staging folder>/<SurveyID>_WELF.dta", clear
 do "Stata/validate_50by35.do"
 ```
 
