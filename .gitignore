@@ -89,6 +89,7 @@ Thumbs.db
 # AI
 .claude/
 .posit/
+.kilo/
 
 # Data files (Stata, SPSS, etc.) — never commit raw or processed microdata
 **/*.dta
