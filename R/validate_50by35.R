@@ -26,6 +26,17 @@ validate_50by35 <- function(df) {
   if (any(!grepl("^[A-Z]{3}$", df$code))) fail("code must be a 3-letter uppercase code")
   if (anyDuplicated(df[c("hhid", "pid")])) fail("hhid + pid do not uniquely identify rows")
 
+  # one survey per file
+  for (v in c("code", "year", "survname"))
+    if (length(unique(df[[v]])) != 1)
+      fail(v, " must have the same value in every row (one survey per file)")
+
+  # no extended missing values (.a-.z): haven reads them as tagged NAs
+  if (requireNamespace("haven", quietly = TRUE))
+    for (v in names(df))
+      if (is.double(df[[v]]) && any(haven::is_tagged_na(df[[v]])))
+        fail(v, " has extended missing values (.a-.z); use system missing (.)")
+
   numeric_vars <- c("year", "welfare", "welfare_type", "welfare_self", "weight", "camp", "urban")
   for (v in numeric_vars)
     if (!is.numeric(df[[v]])) fail(v, " must be numeric")

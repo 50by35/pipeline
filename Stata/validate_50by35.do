@@ -40,6 +40,25 @@ if _rc {
     exit 459
 }
 
+* ---- one survey per file ----------------------------------------------------
+foreach v in code year survname {
+    capture assert `v' == `v'[1]
+    if _rc {
+        di as error "SCHEMA ERROR: `v' must have the same value in every row (one survey per file)"
+        exit 459
+    }
+}
+
+* ---- no extended missing values (.a-.z); use system missing (.) -------------
+quietly ds, has(type numeric)
+foreach v in `r(varlist)' {
+    quietly count if `v' > .
+    if r(N) > 0 {
+        di as error "SCHEMA ERROR: `v' has extended missing values (.a-.z); use system missing (.)"
+        exit 459
+    }
+}
+
 * ---- numeric variable types -------------------------------------------------
 foreach v in year welfare welfare_type welfare_self weight camp urban {
     capture confirm numeric variable `v'
@@ -134,6 +153,14 @@ foreach v of local cats {
         local vl : value label `v'
         if "`vl'" == "" {
             di as error "SCHEMA ERROR: `v' has no value label"
+            exit 459
+        }
+        * the label must define exactly the schema codes, no more and no fewer
+        local expk = cond("`v'" == "welfare_type", 3, ///
+                     cond(inlist("`v'", "male", "urban", "camp"), 2, 4))
+        quietly label list `vl'
+        if r(k) != `expk' {
+            di as error "SCHEMA ERROR: `v' must have the schema's exact value labels"
             exit 459
         }
         if "`v'" == "welfare_type" {
