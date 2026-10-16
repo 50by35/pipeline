@@ -8,7 +8,7 @@ date: today
 Approved files are available from the `FDP` server on **datalibweb**, in two collections:
 
 | Collection | Content |
-|---|---|
+|------------------------------------|------------------------------------|
 | `FDPRAW` | Raw survey microdata, questionnaires and documentation |
 | `FDP` | Harmonized microdata (50by35 schema) and harmonization programs |
 
@@ -16,13 +16,13 @@ The harmonized welfare module in the `FDP` collection is called **`WELF`**.
 
 ## Steps at a glance
 
-Choose R or Stata, the steps are the same.
+Data users can choose R or Stata. The steps are the same.
 
-1. **Request access.** Register on datalibweb and subscribe to the surveys you need ([Step 1](#sec-access-permission)).
-2. **Save your token once.** Install the client and save your datalibweb token ([Step 2](#sec-access-token)).
-3. **Find your survey.** Check what is available for your country ([Step 3](#sec-access-find)).
-4. **Load the data.** Download the harmonized file into R or Stata ([Step 4](#sec-access-load)).
-5. **Calculate the self-reliance rate** (optional) ([Step 5](#sec-access-sr)).
+1.  **Request access.** Register on datalibweb and subscribe to the required surveys ([Step 1](#sec-access-permission)).
+2.  **Save the token.** Install the client and save the datalibweb token ([Step 2](#sec-access-token)).
+3.  **Find the survey.** Check what is available for the country of interest ([Step 3](#sec-access-find)).
+4.  **Load the data.** Download the harmonized file into R or Stata ([Step 4](#sec-access-load)).
+5.  **Calculate the self-reliance rate** (optional) ([Step 5](#sec-access-sr)).
 
 ## Step by step
 
@@ -32,39 +32,36 @@ Register on datalibweb and request access to the `FDPRAW` and `FDP` collections.
 
 Both clients need the World Bank intranet or VPN.
 
-### Step 2. Save your token once {#sec-access-token}
+### Step 2. Save the token once {#sec-access-token}
 
-Two clients are available: the [`datalibweb` Stata package](https://github.com/worldbank/datalibweb) and the [`dlw` R package](https://github.com/worldbank/dlw). Install the one you use, then save your datalibweb token. It is the same token PRIMUS uses. It is valid for 30 days and renewed on the [datalibweb website](https://datalibweb2.worldbank.org). Do not commit tokens or put them in scripts.
+Two clients are available: the [`datalibweb` Stata package](https://github.com/worldbank/datalibweb) and the [`dlw` R package](https://github.com/worldbank/dlw). Install the one in use, then save the datalibweb token. It is the same token PRIMUS uses. It is valid for 30 days and renewed on the [datalibweb website](https://datalibweb2.worldbank.org). Do not commit tokens or put them in scripts.
 
 ::: {.panel-tabset group="language"}
-
 ## R
 
-```r
-dlw_set_token("<your datalibweb token>")   # one-time setup; stored in the system keychain
+``` r
+dlw_set_token("<datalibweb token>")   # one-time setup; stored in the system keychain
 ```
 
 R reuses the saved token. Run `dlw_set_token()` again only after renewal.
 
 ## Stata
 
-```stata
-datalibweb, token(<your datalibweb token>) version(2)
+``` stata
+datalibweb, token(<datalibweb token>) version(2)
 * one-time setup; do not hard-code it in a do-file.
 ```
-
 :::
 
-### Step 3. Find your survey {#sec-access-find}
+### Step 3. Find the survey {#sec-access-find}
 
 ::: {.panel-tabset group="language"}
-
 ## R
 
-```r
+``` r
 library(dlw)
 
-# all collections (servers) you can access
+# all collections (servers) the user can access
 dlw_server_catalog()
 
 # what is in a collection; in R the FDP server holds both the harmonized
@@ -80,21 +77,18 @@ dlw_server_inventory("TCD", server = "FDP")
 
 ## Stata
 
-```stata
+``` stata
 * interactive browser: click through region -> country -> collection
 datalibweb
-
 ```
-
 :::
 
 ### Step 4. Load the data {#sec-access-load}
 
 ::: {.panel-tabset group="language"}
-
 ## R
 
-```r
+``` r
 library(dlw)
 
 # harmonized 50by35 welfare module (WELF) from the FDP collection
@@ -118,7 +112,7 @@ raw <- dlw_get_data(
 
 ## Stata
 
-```stata
+``` stata
 * harmonized 50by35 welfare module (WELF) from the FDP collection;
 * the latest master and harmonization versions are loaded by default
 datalibweb, country(TCD) years(2022) type(FDP) mod(WELF) clear
@@ -130,20 +124,18 @@ dlw, country(TCD) years(2022) type(FDP) mod(WELF) verm(01) vera(01) survey(EHCVM
 datalibweb, country(TCD) years(2022) type(FDPRAW) ///
     surveyid(TCD_2022_EHCVM_V01_M) filename(individual_TCD_2022.dta) clear
 ```
-
 :::
 
-Versions are **never replaced**: a new release gets a new version number and earlier vintages stay available. Record the full survey ID you used in your analysis (see [File naming conventions](#sec-access-naming)).
+Versions are **never replaced**: a new release gets a new version number and earlier vintages stay available. The full survey ID used in an analysis should be recorded with it (see [File naming conventions](#sec-access-naming)).
 
 ### Step 5. Calculate the self-reliance rate {#sec-access-sr}
 
 The self-reliance rate is the weighted share of people whose `welfare_self` reaches the poverty line. When the file has a national poverty line (`natpovline`) and no currency conversion is needed.
 
 ::: {.panel-tabset group="language"}
-
 ## R
 
-```r
+``` r
 # weighted share with welfare_self at or above the national line
 if ("natpovline" %in% names(welf)) {
   weighted.mean(welf$welfare_self >= welf$natpovline, welf$weight)
@@ -152,7 +144,7 @@ if ("natpovline" %in% names(welf)) {
 
 ## Stata
 
-```stata
+``` stata
 * weighted share with welfare_self at or above the national line
 capture confirm variable natpovline
 if !_rc {
@@ -160,18 +152,17 @@ if !_rc {
     sum _sr [aw=weight]
 }
 ```
-
 :::
 
-`natpovline` is optional and some files do not have it (nothing is calculated then). For the $3.00/day international line, the poverty rate, and the camp / non-camp results, see [Full indicator calculation](#sec-access-full).
+`natpovline` is optional and some files do not have it (nothing is calculated then). For the \$3.00/day international line, the poverty rate, and the camp / non-camp results, see [Full indicator calculation](#sec-access-full).
 
 ### If something goes wrong
 
-| What you see | What it means | What to do |
-|---|---|---|
-| Access denied, or the collection is not listed | You are not subscribed to the collection | Request access in Step 1 |
-| Token or login error | Your datalibweb token has expired | Get a new token and repeat Step 2 |
-| Cannot connect | You are off the World Bank network | Connect to the intranet or VPN |
+| Symptom | Meaning | Action |
+|------------------------|------------------------|------------------------|
+| Access denied, or the collection is not listed | The user is not subscribed to the collection | Request access in Step 1 |
+| Token or login error | The datalibweb token has expired | Get a new token and repeat Step 2 |
+| Cannot connect | The computer is off the World Bank network | Connect to the intranet or VPN |
 | No survey found | The survey is not approved yet, or the country or year is wrong | Check [Step 3](#sec-access-find), and ask the uploader whether it is approved |
 | `natpovline` not found | The survey has no national poverty line | Use the international line instead (see below) |
 
@@ -183,7 +174,7 @@ datalibweb survey identifiers guarantee replicability: versions are **never repl
 
 **Raw (master) data** in `FDPRAW`:
 
-```
+```         
 CCC_YYYY_SSSS_V##_M
 ```
 
@@ -194,7 +185,7 @@ CCC_YYYY_SSSS_V##_M
 
 **Harmonized data** in `FDP`:
 
-```
+```         
 CCC_YYYY_SSSS_V##_M_V##_A_FDP
 ```
 
@@ -203,13 +194,13 @@ CCC_YYYY_SSSS_V##_M_V##_A_FDP
 
 **Module files** append the module name to the survey ID. The 50by35 harmonized welfare file (V01) for Chad is:
 
-```
+```         
 TCD_2022_EHCVM_V01_M_V01_A_FDP_WELF.dta
 ```
 
 ### Full indicator calculation {#sec-access-full}
 
-This example loads a harmonized file and calculates the self-reliance rate and poverty rate, in percent, on the national line (primary, if `natpovline` is in the file) and the $3.00/day 2021 PPP line, for the whole sample and by camp status. Each estimate comes with a **standard error and 95% confidence interval**. It uses the same CPI and PPP helpers, and therefore the same values, as the [indicator XML](03-harmonized-upload.qmd#sec-cpi-ppp) in the harmonized upload. Unlike the steps above, it needs a copy of this repository: it loads `R/utils.R` (R) or `Stata/utils.do` (Stata) by relative path, so run it from the repository's main folder, or copy that one file next to your script and edit the path.
+This example loads a harmonized file and calculates the self-reliance rate and poverty rate, in percent, on the national line (primary, if `natpovline` is in the file) and the \$3.00/day 2021 PPP line, for the whole sample and by camp status. Each estimate comes with a **standard error and 95% confidence interval**. It uses the same CPI and PPP helpers, and therefore the same values, as the [indicator XML](03-harmonized-upload.qmd#sec-cpi-ppp) in the harmonized upload. Unlike the steps above, it needs a copy of this repository: it loads `R/utils.R` (R) or `Stata/utils.do` (Stata) by relative path, so run it from the repository's main folder, or copy that one file next to the script and edit the path.
 
 The standard errors account for the survey design:
 
@@ -222,10 +213,9 @@ The standard errors account for the survey design:
 The R example needs the [`survey`](https://cran.r-project.org/package=survey) package; the Stata example uses the built-in `svy` commands.
 
 ::: {.panel-tabset group="language"}
-
 ## R
 
-```r
+``` r
 library(dlw)
 library(survey)
 source("R/utils.R")   # dlw_support_tables(), dlw_cpi_ppp(); run from the repository root
@@ -298,7 +288,7 @@ print(res, digits = 4)
 
 ## Stata
 
-```stata
+``` stata
 * harmonized 50by35 welfare module (WELF) from the FDP collection;
 * the latest master and harmonization versions are loaded by default
 datalibweb, country(TCD) years(2022) type(FDP) mod(WELF) clear
@@ -367,6 +357,4 @@ foreach l of local camplevels {
     svy, subpop(if camp==`l'): mean `inds'
 }
 ```
-
 :::
-

@@ -5,8 +5,8 @@ date: today
 
 ## Overview
 
-Before a survey can be harmonized, its raw microdata should exist on **datalibweb**. If a raw dataset is not already available there (e.g. on the GMD or region server), it must first be uploaded through
-**PRIMUS**. This can be done using the web interface or the R or Stata clients. 
+Before a survey can be harmonized, its raw data files should exist on **datalibweb**. If they are not already available, for example, from the GMD or region server, raw data files can be uploaded through
+**PRIMUS** using the web interface or the R or Stata clients. 
 
 ::: {.callout-tip}
 ## Check first
@@ -17,17 +17,19 @@ Query datalibweb to confirm whether the raw survey is already present before sta
 
 The steps are the same for R and Stata:
 
-1. **Set up.** Install the PRIMUS client and save your datalibweb token ([Step 1](#sec-raw-setup)).
-2. **Prepare your files.** Gather the raw `.dta` files and any questionnaires, and pick the survey ID ([Step 2](#sec-raw-prepare)).
+1. **Set up.** Install the PRIMUS client and save the datalibweb token ([Step 1](#sec-raw-setup)).
+2. **Prepare the files.** Gather the raw `.dta` files and any questionnaires, and pick the survey ID ([Step 2](#sec-raw-prepare)).
 3. **Run the upload script.** Edit a few lines at the top of `R/01_upload_raw.R` or `Stata/01_upload_raw.do` and run it ([Step 3](#sec-raw-run)).
 4. **Check the result.** The script prints a transaction ID; the transaction then waits for an approver ([Step 4](#sec-raw-check)).
 5. **Wait for approval.** Once approved, the files appear on datalibweb and can be harmonized ([Reviewing & approving](#reviewing-approving-via-primus)).
 
 ## Step by step
 
-### Step 1. Set up once {#sec-raw-setup}
+### Step 1. Set up once {#sec-raw-setup}[^1]
 
-You need a PRIMUS client (the R or the Stata package) and a **datalibweb token**. Do this once; repeat only when your token expires (every 30 days).
+[^1]: When uploading through the web interface, this step can be skipped.
+
+The uploader needs a PRIMUS client (the R or the Stata package) and a **datalibweb token**. This is done once and repeated only when the token expires (every 30 days).
 
 ::: {.callout-note}
 ## Install a client
@@ -42,14 +44,14 @@ You need a PRIMUS client (the R or the Stata package) and a **datalibweb token**
 - **Stata (Windows):** Download and extract the [PRIMUS repository](https://github.com/worldbank/primus). In Stata, run `sysdir`; copy the *contents* of `Stata/plus/p` into a `p` folder under the `PLUS` directory. Restart Stata and verify with `which primus`.
 :::
 
-Then save your token. Get it from the [datalibweb website](https://datalibweb2.worldbank.org) (valid 30 days). Do not type it into a script.
+Then save the token, which is issued on the [datalibweb website](https://datalibweb2.worldbank.org) (valid 30 days). The token must never be typed into a script.
 
 ::: {.panel-tabset group="language"}
 
 ## R
 
 ```r
-primus_set_token("<your datalibweb token>")  # stored in the system keychain
+primus_set_token("<datalibweb token>")  # stored in the system keychain
 ```
 
 The R PRIMUS and `dlw` packages share this token. Run the line again only after renewing it.
@@ -57,23 +59,23 @@ The R PRIMUS and `dlw` packages share this token. Run the line again only after 
 ## Stata
 
 ```stata
-primus register, token(<your datalibweb token>)
+primus register, token(<datalibweb token>)
 ```
 
 Repeat after renewing the token.
 
 :::
 
-Finally, download this repository or the prepared scripts to your computer. You run the scripts from its main folder: in R, open the folder as your project or use `setwd()`; in Stata, use `cd`.
+Download this repository or the prepared R/Stata scripts to the local computer. The scripts are run from the repository's main folder: in R, open the folder as a project or use `setwd()`; in Stata, use `cd`.
 
-### Step 2. Prepare your files {#sec-raw-prepare}
+### Step 2. Prepare the files {#sec-raw-prepare}
 
-You need:
+The uploader needs:
 
 - **The raw data files**, as Stata `.dta` files (for example a household file and an individual file).
 - **Questionnaires and documentation** (optional but recommended), as `.pdf`, `.doc(x)`, `.xls(x)`, `.zip` or `.rar`. They travel with the data on datalibweb.
 - **A survey ID** in the form `CCC_YYYY_SSSS_V01_M`: country code, year the data collection started, survey acronym, and `V01` for a first release (for example `COL_2023_GEIH_V01_M`).
-- **The folder with your raw data files.** In both the R and the Stata script, edit the `rawroot` line at the top (`rawroot <- "..."` in R, `local rawroot "..."` in Stata) to point to that folder. Use forward slashes, for example `C:/Users/you/raw-data`. The batch scripts also have an `outdir` line for your **staging folder**, where the batch manifest CSV is kept in a `manifests` subfolder.
+- **The folder with the raw data files.** In both the R and the Stata script, edit the `rawroot` line at the top (`rawroot <- "..."` in R, `local rawroot "..."` in Stata) to point to that folder. Use forward slashes, for example `C:/Users/<username>/raw-data`. The batch scripts also have an `outdir` line for the **staging folder**, where the batch manifest CSV is kept in a `manifests` subfolder.
 
 ### Step 3. Run the upload script {#sec-raw-run}
 
@@ -101,34 +103,34 @@ The script opens a transaction with the first file, attaches the other files to 
 
 ::: {.callout-tip}
 ## Practice first (draft only)
-To try the upload without sending it to approvers, delete the last step before running: the `primus_confirm(...)` line in R, or the `primus action ... decision(confirm)` command in Stata. The transaction then stays a private **draft**. You can view and delete it in the [PRIMUS web interface](https://primusuiprod.ase.worldbank.org); the R and Stata packages cannot delete a draft.
+To try the upload without sending it to approvers, delete the last step before running: the `primus_confirm(...)` line in R, or the `primus action ... decision(confirm)` command in Stata. The transaction then stays a private **draft**. The uploader can view and delete it in the [PRIMUS web interface](https://primusuiprod.ase.worldbank.org); the R and Stata packages cannot delete a draft.
 :::
 
 ::: {.callout-note}
 ## Uploading in the PRIMUS web interface
-You can also upload through the [PRIMUS web interface](https://primusuiprod.ase.worldbank.org) (process `FDPRaw-data`, **Upload File(s)**), choosing the same folders as above. The **R and Stata clients are still preferred**: the scripts repeat exactly, keep the survey ID and file list in one place, and the batch scripts handle many surveys.
+Raw data can also be uploaded through the [PRIMUS web interface](https://primusuiprod.ase.worldbank.org) (process `FDPRaw-data`, **Upload File(s)**), choosing the same folders as above. The **R and Stata clients are more convenient**: the scripts repeat exactly, keep the survey ID and file list in one place, and the batch scripts handle many surveys.
 :::
 
 ### Step 4. Check the result {#sec-raw-check}
 
-The script prints `Opened transaction ...` with the transaction ID, and at the end `Raw upload confirmed`. Keep the transaction ID: it identifies your upload in PRIMUS. In the web interface, a confirmed transaction appears under **Pending**; an unconfirmed one under **Draft**.
+The script prints `Opened transaction ...` with the transaction ID, and at the end `Raw upload confirmed`. Keep the transaction ID: it identifies the upload in PRIMUS. In the web interface, a confirmed transaction appears under **Pending**; an unconfirmed one under **Draft**.
 
 ### If something goes wrong
 
-| What you see | What it means | What to do |
+| Symptom | Meaning | Action |
 |---|---|---|
-| Token or login error | Your datalibweb token has expired | Get a new token and repeat the token step in Step 1 |
+| Token or login error | The datalibweb token has expired | Get a new token and repeat the token step in Step 1 |
 | File not found | The `rawroot` folder is still the placeholder or is wrong | Set the folder as described in Step 2 |
 | File or folder not accepted | The file type does not match the folder | `.dta` goes in `Data/Stata`; documents go in `Doc/Questionnaires` |
-| Survey ID not accepted, or an open transaction already exists | A survey can have only one open transaction, and a new version (`V02`) needs `V01` approved first | Ask the approver to approve or reject the earlier one, or delete your draft in the web interface |
+| Survey ID not accepted, or an open transaction already exists | A survey can have only one open transaction, and a new version (`V02`) needs `V01` approved first | Ask the approver to approve or reject the earlier one, or delete the draft in the web interface |
 
 ## How it works {#sec-raw-how}
 
-This section is for reference. The scripts above run these commands; you can also run them yourself.
+This section is for reference. The scripts above run these commands, which can also be run directly.
 
 Raw files are uploaded as a PRIMUS **transaction** using the `FDPRaw-data` process (`processid = 39`) by users with uploader status. A raw data upload starts with a `new` file that returns a transaction ID; additional files are then attached to that same transaction ID. Specify the destination `folderpath` and `type(raw)`.
 
-Both clients call the same PRIMUS API. You can also upload through the [web interface](https://primusuiprod.ase.worldbank.org), or programmatically with the [`primus` Stata package](https://github.com/worldbank/primus) (Windows) or the [`primus` R package](https://github.com/worldbank/primus-r) (cross-platform).
+Both clients call the same PRIMUS API. Uploads can also be made through the [web interface](https://primusuiprod.ase.worldbank.org), or programmatically with the [`primus` Stata package](https://github.com/worldbank/primus) (Windows) or the [`primus` R package](https://github.com/worldbank/primus-r) (cross-platform).
 
 Upload the survey **documentation and questionnaires** together with the raw data, so the source instruments travel with the microdata on datalibweb. Add them as additional files on the same transaction ID, using the folder path matching the file type:
 
@@ -144,7 +146,7 @@ Upload the survey **documentation and questionnaires** together with the raw dat
 ```r
 library(primus)
 
-# Discover the processes you can act on
+# List the processes available to the user
 primus_list_processes()
 
 # What folders / extensions does the process accept?
@@ -196,7 +198,7 @@ primus_confirm(up$transaction_id, comments = "raw data ready for review")
 ## Stata
 
 ```stata
-* Check the processes you can act on (lists all processes and their metadata)
+* Check the processes available to the user (lists all processes and their metadata)
 primus download, meta
 
 * What folders / extensions does the process accept?
