@@ -77,7 +77,7 @@ See the [Schema & Variable Dictionary](chapters/05-schema.qmd) for the full vari
 value ranges, and labeling conventions.
 
 ## Calculating the 50by35 Self-Reliance Indicator from Harmonized Microdata
-The share of the population defined as self-reliant can be calculated using the **national poverty line** when the harmonized file includes `natpovline`. This is the **primary** 50by35 self-reliance indicator:
+The share of the population defined as self-reliant can be calculated using the **national poverty line** when the harmonized file includes `natpovline`:
 
 $$
 SR^{nat} = \frac{\displaystyle\sum_{i=1}^{n} \mathbb{1}\left[\text{welfare\_self}_i \geq \text{natpovline}_i\right] \cdot \text{weight}_i}{\displaystyle\sum_{i=1}^{n} \text{weight}_i}

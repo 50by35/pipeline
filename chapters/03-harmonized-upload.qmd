@@ -16,20 +16,19 @@ All harmonized files must pass validation checks before they can be uploaded to 
 ### XML file
 A harmonized data upload starts with an **indicator `.xml`** file that opens the transaction and returns a transaction ID. The XML contains metadata about the harmonized file, the **50by35 self-reliance rate** (share of the population self-reliant) computed from `welfare_self`, and the poverty rate computed from `welfare`, at two poverty lines:
 
-- **National poverty line (primary).** When the file includes `natpovline`, the primary self-reliance indicator is the weighted share of individuals with `welfare_self >= natpovline`. The poverty headcount is the weighted share with `welfare < natpovline`. All three variables are annual per capita local currency, so the comparison is made row by row with no CPI or PPP conversion. This also handles national lines that vary by region or by urban/rural area.
-- **International line (secondary).** $3.00/day 2021 PPP (**placeholder**, pending confirmation from the 50by35 methodology team). This line is always reported. It becomes the primary indicator only when the file has no `natpovline`.
+- **National poverty line** When the file includes `natpovline`, the self-reliance indicator is calculated as the weighted share of individuals with `welfare_self >= natpovline`. The poverty rate is the weighted share with `welfare < natpovline`. All three variables are annual per capita local currency, so the comparison is made row by row with no CPI or PPP conversion. This also handles national lines that vary by region or by urban/rural area.
+- **International line** The self-reliance and poverty rates are also always reported at $3.00/day 2021 PPP.
 
 Each indicator is reported for the whole sample and **by camp status** (`camp==0` non-camp, `camp==1` camp), where the file has those values. Rows with missing `camp` are counted in the whole-sample figures only.
 
-The XML's content can be customized, provided it follows the **PRIMUS XML schema for harmonized data**: a `<Request>` section (`RequestKey`, `welfare`, `weight`, `By`, `N_By_Group`, `nParamSets`, plus a `key;value` CDATA block of run metadata), a `<Result>` section (one `<Welfare>` per welfare variable, each containing one `<ByGroup>` per `N_By_Group` with a `<DATASUMMARY>` and one `<CALCULATION>` per `nParamSets` — also `key;value` CDATA blocks), and a `<LOG_DETAIL>` free-text block that records calculation details but is not shown in the approval table. Both upload scripts in this repository write the same document, shaped to what the PRIMUS approval page displays:
+::: {.callout-note}
+The XML follows the **PRIMUS XML schema for harmonized data** (`<Request>`, `<Result>` and `<LOG_DETAIL>`), laid out to match what the approval page displays:
 
-- **One `<Welfare>` block and one `<ByGroup>`, named `none`.** The approval page shows no tables when `<By>` is set, and shows only the `none` group when `<By>` is empty (tested with camp groups, including the standard `primus::create_xml()` output with a by variable), so the camp breakdown is not written as `<ByGroup>` elements. `<By>` is empty and `N_By_Group` is 1.
-- **Each `CALCULATION` is one row of the approval table**, with these keys in this order: `Subgroup` (`All`, `Non-camp` or `Camp`), `Indicator` (`SelfRelianceRate`, which uses `welfare_self`, or `PovertyRate`, which uses `welfare`), `Value` (a percentage with two decimals, e.g. `25.62%`), `Variable` (`welfare_self` or `welfare`), `PovertyLine` (`National (natpovline)` or `$3.00/day (2021 PPP)`), `CPIValue` and `PPPValue`. The CPI and PPP keys are `NA` on the national-line rows. The key order is the column order in the table, except that PRIMUS shows `CPIValue` and `PPPValue` next to the welfare set on the left.
-- **Rows:** self-reliance rate first, then poverty rate; within each, the subgroups in order, national line before international line. With `natpovline` that is 12 rows (2 indicators × 2 lines × 3 subgroups) and `nParamSets` is 12. Without it there is one line, so 6 rows, and without `camp` values just the `All` subgroup. Rows with missing `camp` are counted in `All` only.
-- **The `DATASUMMARY`** gives the record count and weighted population (overall, then for each camp subgroup), then the mean `welfare`, `welfare_self` and (if present) `natpovline`.
-- **No `key;value` header line** in any CDATA block: the approval page would show it as a constant `Key` column.
-- **Welfareset column:** with one `<Welfare>` block the page shows `welfare_self, weight` on every row, including the poverty rate rows. The `Variable` column states which welfare variable each row uses.
-- `PRIMARY_LINE` in the request metadata records which line is primary.
+- **One `<Welfare>` block and one `<ByGroup>` (`none`), with `<By>` empty.** The approval page shows no tables when `<By>` is set or when groups other than `none` are used, so the camp breakdown is a `Subgroup` key instead.
+- **One `CALCULATION` per table row**, with keys `Subgroup`, `Indicator`, `Value`, `Variable`, `PovertyLine`, `CPIValue`, `PPPValue` (`NA` for the national line). Key order is column order, except that PRIMUS shows `CPIValue` and `PPPValue` on the left. Rows are ordered by indicator, then subgroup, then line: 12 rows with `natpovline`, 6 without, and `All` only without `camp`.
+- **The Welfareset column reads `welfare_self, weight` on every row**; the `Variable` column states the variable each row uses.
+:::
+
 
 ### CPI and PPP conversion factors {#sec-cpi-ppp}
 

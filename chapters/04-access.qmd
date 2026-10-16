@@ -292,5 +292,3 @@ capture drop _sr _sr_nat _poor_nat
 ```
 
 :::
-
-For citation guidance and further options (e.g. PPP conversion on load), see the `datalibweb` help file in Stata and the [datalibweb guidelines](https://github.com/worldbank/datalibweb); questions to the datalibweb team at `datalibweb@worldbank.org`.
