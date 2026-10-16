@@ -6,40 +6,162 @@ date: today
 ## Overview
 Harmonized microdata and harmonization scripts are uploaded to **datalibweb** via **PRIMUS**. After review, approved files are published to datalibweb for 50by35 monitoring.
 
-## Uploading via PRIMUS
+## Steps at a glance
 
-Harmonized files are uploaded as a PRIMUS **transaction** using the `FDP-harmonized-data` process (`processid = 40`) by users with uploader status. 
+Choose R or Stata, whichever you prefer. The steps are the same.
+
+1. **Set up once.** Install the PRIMUS client and save your datalibweb token ([Step 1](#sec-harm-setup)).
+2. **Prepare your files.** Name your harmonized `.dta` file and harmonization script after the survey ID ([Step 2](#sec-harm-prepare)).
+3. **Run the upload script.** Edit a few lines at the top of `R/03_upload_harmonized.R` or `Stata/03_upload_harmonized.do` and run it ([Step 3](#sec-harm-run)). The script checks your file, calculates the self-reliance numbers, uploads everything and confirms the upload.
+4. **Check the result.** Look for the transaction ID and the indicator values in the output ([Step 4](#sec-harm-check)).
+5. **Wait for approval.** Regional and global approvers review the upload ([Reviewing & approving](#reviewing-approving-via-primus)).
+
+## Step by step
+
+### Step 1. Set up once {#sec-harm-setup}
+
+1. Install the PRIMUS client and save your datalibweb token, as described in [Upload Raw Data, Step 1](01-raw-upload.qmd#sec-raw-setup).
+2. The harmonized upload also reads CPI and PPP values from datalibweb, so the **datalibweb** client needs the same token:
+
+::: {.panel-tabset group="language"}
+
+## R
+
+```r
+dlw_set_token("<your datalibweb token>")   # stored in the system keychain
+```
+
+## Stata
+
+```stata
+datalibweb, token(<your datalibweb token>)
+```
+
+:::
+
+3. Download this repository to your computer and **run the scripts from its main folder**: in R, open the folder as your project or use `setwd()`; in Stata, use `cd`. The scripts load helper files from the repository by relative path: `R/utils.R` and `R/validate_50by35.R` in R, `Stata/utils.do` and `Stata/validate_50by35.do` in Stata. If you copy a script elsewhere, copy these files with it and keep the `R/` and `Stata/` folder names (or edit the paths in the script).
+
+### Step 2. Prepare your files {#sec-harm-prepare}
+
+You need:
+
+- **A survey ID** in the form `CCC_YYYY_SSSS_V01_M_V01_A_FDP`: the raw survey ID, then the harmonization version and `FDP` (for example `COL_2023_GEIH_V01_M_V01_A_FDP`).
+- **The harmonized file**, named `<survey ID>_WELF.dta`, which follows the [schema](05-schema.qmd). Save it in your **staging folder**: a folder on your computer, outside the repository, where the harmonized files are kept before upload. The upload scripts also write the indicator `.xml` there, and the batch scripts keep their manifest CSVs in a `manifests` subfolder.
+- **Your harmonization script**, named `<survey ID>_WELF.do` (or `.R` / `.py`) and saved in the `Stata/` folder of the repository. It is uploaded with the data so the harmonization can be reproduced.
+- **The staging folder path.** In both the R and the Stata script, edit the `outdir` line at the top (`outdir <- "..."` in R, `local outdir "..."` in Stata) to point to your staging folder. Use forward slashes, for example `C:/Users/you/OneDrive/REFUGEE/staging`. The harmonization scripts have the same `outdir` line, so they save the file where the upload expects it.
+
+The script rejects files that do not follow the [schema](05-schema.qmd). Run the validation on its own first if you want to fix problems before uploading (see [Harmonization](02-harmonization.qmd)).
+
+### Step 3. Run the upload script {#sec-harm-run}
+
+1. Open `R/03_upload_harmonized.R` or `Stata/03_upload_harmonized.do`.
+2. In the parameters block, set the **survey ID** and the path to the **harmonization script**. Each script has ready-made example blocks to copy. Leave the `cpi_override` and `ppp_override` settings as they are.
+3. Run the whole script.
+
+::: {.panel-tabset group="language"}
+
+## R
+
+```r
+source("R/03_upload_harmonized.R")
+```
+
+## Stata
+
+```stata
+do "Stata/03_upload_harmonized.do"
+```
+
+:::
+
+The script then, in this order:
+
+1. **Checks your file** against the schema. If there is a problem, it stops and names it. Nothing is uploaded until the file passes.
+2. **Looks up the CPI and PPP values** it needs from datalibweb.
+3. **Calculates the 50by35 indicators**: the self-reliance rate and poverty rate, for the whole sample and by camp status, using your national poverty line (`natpovline`) if the file has one and the $3.00/day international line.
+4. **Uploads** a small indicator (`.xml`) file that opens the transaction, then your data and your harmonization script.
+5. **Confirms** the upload so approvers can see it.
+
+To upload many surveys in one run, use `R/03_upload_harmonized_batch.R` or `Stata/03_upload_harmonized_batch.do`. They process every harmonized file in the folder and print a summary at the end.
+
+::: {.callout-tip}
+## Practice first (draft only)
+To try the upload without sending it to approvers, delete the last step before running: the `primus_confirm(...)` line in R, or the `primus action ... decision(confirm)` command in Stata. The transaction then stays a private **draft** that approvers cannot see. You can view and delete it in the [PRIMUS web interface](https://primusuiprod.ase.worldbank.org); the R and Stata packages cannot delete a draft.
+:::
+
+::: {.callout-note}
+## Uploading in the PRIMUS web interface
+You can also upload through the [PRIMUS web interface](https://primusuiprod.ase.worldbank.org) (process `FDP-harmonized-data`, **Upload File(s)**). The form asks for the transaction ID (optional), country, year, survey acronym and the master and adaptation versions, then takes the **XML** and the files: the `.dta` in `Data/Harmonized` and the harmonization script in `Programs`. A transaction can hold up to 1.5 GB.
+
+The **R and Stata clients are still preferred**: one script validates, builds the XML and uploads everything in a single run, so there is less room for manual error, and the batch scripts handle many surveys.
+
+If you use the web interface, you still have to **validate the file and create the XML with the code in this repository first**. Run the validation and XML-creation steps (steps 1 to 3 of the annotated script under [How it works](#sec-harm-how)), then upload the resulting `.xml` together with the data and script in the web form. The web form does not validate the data or calculate the indicators.
+:::
+
+### Step 4. Check the result {#sec-harm-check}
+
+In the output, look for:
+
+- the validation result (`50by35 schema validation PASSED`, plus any `SCHEMA WARNING` lines, which do not stop the upload);
+- the CPI and PPP values used (`CPI(...) = ...   PPP2021(...) = ...`);
+- the self-reliance shares for the national line and for the $3.00/day line;
+- `Opened transaction ...` with the transaction ID, and at the end `Harmonized upload confirmed`.
+
+In the PRIMUS web interface, the transaction shows the indicator values in the **Data Summary** and **Calculation Details** tables. Check them before the upload goes to review.
+
+### If something goes wrong
+
+| What you see | What it means | What to do |
+|---|---|---|
+| Validation error | Your file does not follow the schema | Fix the problem named in the message and run again. See [Schema](05-schema.qmd) |
+| Token or login error | Your datalibweb token has expired | Get a new token and repeat Step 1 |
+| `no national value` for CPI or PPP | The datalibweb support files have no value for your country or year | Set `cpi_override` and `ppp_override` in the script, or ask the 50by35 team for the right values. See [CPI and PPP](#sec-cpi-ppp) |
+| `filename must have the format SurveyID_Module` | The file name does not match the survey ID | Name the files `<survey ID>_WELF.dta` and `<survey ID>_WELF.do` |
+| Survey ID not accepted, or an open transaction already exists | A survey can have only one open transaction, and a new version (`V02`) needs `V01` approved first | Ask the approver to approve or reject the earlier one, or delete your draft in the web interface |
+
+## How it works {#sec-harm-how}
+
+This section is for reference. It explains what the upload script does, so you can check or adapt it.
+
+Harmonized files are uploaded as a PRIMUS **transaction** using the `FDP-harmonized-data` process (`processid = 40`) by users with uploader status.
 
 ### Validation checks
-All harmonized files must pass validation checks before they can be uploaded to datalibweb. These confirm that the harmonized file conforms to the schema, and that mandatory variables are present and non-missing. Any deviation from the schema will trigger an error and prevent the harmonized file from being uploaded to datalibweb. They check for missing values in mandatory variables, for negative or zero values in `welfare` and `weight`, and that `welfare_self` is not greater than `welfare`. Households where `hhsize` differs from the number of `pid` records are flagged with a warning (rosters can be incomplete, and refugee-only samples keep a subset of household members). The validation scripts are `Stata/validate_50by35.do` and `R/validate_50by35.R` in this repository.
+All harmonized files must pass validation checks before they can be uploaded to datalibweb. These confirm that the harmonized file conforms to the schema, and that mandatory variables are present and non-missing. Any deviation from the schema will trigger an error and prevent the harmonized file from being uploaded to datalibweb. They check for missing values in mandatory variables, for negative or zero values in `welfare` and `weight`, and that `welfare_self` is not greater than `welfare`. The optional `natpovline` may be omitted, but if it is included every row must have a positive value. Households where `hhsize` differs from the number of `pid` records are flagged with a warning (rosters can be incomplete, and refugee-only samples keep a subset of household members). The validation scripts are `Stata/validate_50by35.do` and `R/validate_50by35.R` in this repository.
 
 ### XML file
-A harmonized data upload starts with an **indicator `.xml`** file that opens the transaction and returns a transaction ID. The XML contains metadata about the harmonized file, the poverty headcount from `welfare`, and the **50by35 self-reliance share** computed from `welfare_self` at the $3.00/day 2021 PPP line (**placeholder** — pending confirmation from the 50by35 methodology team).
+A harmonized data upload starts with an **indicator `.xml`** file that opens the transaction and returns a transaction ID. The XML contains metadata about the harmonized file, the **50by35 self-reliance rate** (share of the population self-reliant) computed from `welfare_self`, and the poverty rate computed from `welfare`, at two poverty lines:
 
-The XML's content can be customized, provided it follows the **PRIMUS XML schema for harmonized data**: a `<Request>` section (`RequestKey`, `welfare`, `weight`, `By`, `N_By_Group`, `nParamSets`, plus a `key;value` CDATA block of run metadata), a `<Result>` section (one `<Welfare>` per welfare variable, each containing a `<ByGroup>` with a `<DATASUMMARY>` and one `<CALCULATION>` per `nParamSets` — also `key;value` CDATA blocks), and a `<LOG_DETAIL>` free-text block that records calculation details but is not shown in the approval table. Both upload scripts in this repository write the same document, with two `CALCULATION` entries per group: the poverty headcount (from `welfare`) and the 50by35 self-reliance share (from `welfare_self`).
+- **National poverty line** When the file includes `natpovline`, the self-reliance indicator is calculated as the weighted share of individuals with `welfare_self >= natpovline`. The poverty rate is the weighted share with `welfare < natpovline`. All three variables are annual per capita local currency, so the comparison is made row by row with no CPI or PPP conversion. This also handles national lines that vary by region or by urban/rural area.
+- **International line** The self-reliance and poverty rates are also always reported at $3.00/day 2021 PPP.
+
+Each indicator is reported for the whole sample and **by camp status** (`camp==0` non-camp, `camp==1` camp), where the file has those values. Rows with missing `camp` are counted in the whole-sample figures only.
+
+::: {.callout-note}
+The XML follows the **PRIMUS XML schema for harmonized data** (`<Request>`, `<Result>` and `<LOG_DETAIL>`), laid out to match what the approval page displays:
+
+- **One `<Welfare>` block and one `<ByGroup>` (`none`), with `<By>` empty.** The approval page shows no tables when `<By>` is set or when groups other than `none` are used, so the camp breakdown is a `Subgroup` key instead.
+- **One `CALCULATION` per table row**, with keys `Subgroup`, `Indicator`, `Value`, `Variable`, `PovertyLine`, `CPIValue`, `PPPValue` (`NA` for the national line). Key order is column order, except that PRIMUS shows `CPIValue` and `PPPValue` on the left. Rows are ordered by indicator, then subgroup, then line: 12 rows with `natpovline`, 6 without, and `All` only without `camp`.
+- **The Welfareset column reads `welfare_self, weight` on every row**; the `Variable` column states the variable each row uses.
+:::
+
 
 ### CPI and PPP conversion factors {#sec-cpi-ppp}
 
-The conversion factors used to calculate the indicator for the XML file come from the [World Bank PIP](https://pip.worldbank.org) auxiliary tables, pinned to the **2021 PPP framework** (R: `pipr::get_aux("cpi", ppp_version = 2021)`; Stata: `pip tables, table(cpi) ppp_year(2021) clear`):
+The conversion factors used to calculate the international-line indicators for the XML file come from the **Support** files in datalibweb, always the **latest version** available (currently `v15`) and for the **2021 PPP framework**:
 
-- **PPP** — the ICP 2021 purchasing-power-parity conversion factor (LCU per 2021 international $), one value per country.
-- **CPI** — PIP's consumer price index, normalized so that CPI $= 1$ in 2021 and aligned to each survey's fieldwork period, one value per country-year.
+- **PPP** — the latest vintage of the ICP 2021 purchasing-power-parity conversion factor (LCU per 2021 international $), one national value per country, from `pppdata_allvintages.dta` (currently column `ppp_2021_v1_v2`).
+- **CPI** — the annual national CPI from `Yearly_CPI_Final.dta`, expressed relative to 2021: $CPI = CPI_{t} / CPI_{2021}$, so it equals 1 in 2021. One value per country-year.
 
-They enter the self-reliance indicator exactly as in the [formula on the home page](../index.qmd): `welfare_self` (annual per capita LCU at survey-year prices) is divided by 365 to get a daily value, by the survey-year CPI to convert to 2021 prices, and by the PPP factor to convert to 2021 PPP dollars, then compared with $z = \$3.00$ (**placeholder** value, pending confirmation from the 50by35 methodology team).
+Both are read with the `dlw` R package (`dlw_get_gmd_support(filename = ...)`) or the `datalibweb` Stata command (`type(GMDRAW)` with the file name), which load the latest version without a survey ID. The helpers are `dlw_support_tables()` and `dlw_cpi_ppp()` in `R/utils.R` and `dlw_cpi_ppp` in `Stata/utils.do`, and the datalibweb token must be set in R (`dlw`) and in Stata (`datalibweb`). The indicator XML shows the resulting `CPIValue` and `PPPValue`. The World Bank PIP is not used: its CPI only covers country-years with a PIP survey, which many of our surveys are not.
+
+They enter the international-line self-reliance indicator exactly as in the [formula on the home page](../index.qmd): `welfare_self` (annual per capita LCU at survey-year prices) is divided by 365 to get a daily value, by the survey-year CPI to convert to 2021 prices, and by the PPP factor to convert to 2021 PPP dollars, then compared with $z = \$3.00$ (**placeholder** value, pending confirmation from the 50by35 methodology team). The national-line indicators do not use CPI or PPP, because `natpovline` is already in the same units as `welfare_self`.
 
 ::: {.callout-warning}
-## Surveys not in PIP
-PIP's CPI table only contains values for country-years with a PIP survey. For refugee surveys in years not covered by PIP, the upload scripts apply an automatic **CPI fallback** rather than stopping with an error:
-
-1. **Interpolation** — if the survey year falls between two years that do have CPI values, the scripts linearly interpolate between them. For example, Uganda 2018 is bracketed by the 2016 and 2019 PIP survey years, giving an interpolated value of $0.875 + \tfrac{2}{3}(0.967 - 0.875) \approx 0.936$.
-2. **Nearest year** — if the survey year is beyond the range of available PIP CPI values (e.g. a 2025 survey when PIP's latest value is 2023), the most recent available value is used as-is (flat extrapolation).
-
-The fallback method is recorded in the indicator XML's `Method` field (e.g. `Interpolated(CPI_2016=0.874967,CPI_2019=0.967133)` or `NearestYear(CPI_2023=1.140000)`) so reviewers can see exactly how the CPI was derived.
-
-If neither fallback is acceptable, set `cpi_override` in the upload script to the ratio $CPI_{t}/CPI_{2021}$ from the national CPI series (e.g. WDI series `FP.CPI.TOTL`). The override is recorded as `Method;ManualOverride` in the XML.
+## No fallback
+The scripts never interpolate or carry a CPI forward. If the Support CPI has no national value for the survey country and year, or for 2021, the script stops with an error naming the missing value. The same applies to a missing PPP. In that case set `cpi_override` (the ratio $CPI_{t}/CPI_{2021}$) or `ppp_override` (the 2021 PPP factor) in the upload script, or in the batch manifest.
 :::
 
-For convenience, the validation checks, XML creation and upload steps are combined in one script per client — `Stata/03_upload_harmonized.do` and `R/03_upload_harmonized.R` in this repository — condensed below.
+For convenience, the validation checks, XML creation and upload steps are combined in one script per client — `Stata/03_upload_harmonized.do` and `R/03_upload_harmonized.R` in this repository — condensed below. The indicators and XML are produced by shared helpers that both the single-survey and batch scripts use: `sr_indicator_xml` in `Stata/utils.do` and `write_indicator_xml()` in `R/utils.R`.
 
 After uploading, the uploader confirms the draft transaction. Only then does it become visible to approvers.
 
@@ -62,49 +184,43 @@ Note - the examples below are summaries, use the full scripts in this repository
 
 ```r
 library(primus)
-library(pipr)
+library(dlw)
 library(haven)
 
 source("R/validate_50by35.R")
+source("R/utils.R")
 survey_id <- "COL_2023_GEIH_V01_M_V01_A_FDP"
+outdir    <- "C:/path/to/staging"   # staging folder with the harmonized file
+dta_file  <- file.path(outdir, paste0(survey_id, "_WELF.dta"))
+xml_file  <- file.path(outdir, paste0(survey_id, ".xml"))
 
 # 1. Validate: any schema violation stops before upload
-df <- read_dta(paste0("data/processed/", survey_id, "_WELF.dta"))
+df <- read_dta(dta_file)
 validate_50by35(df)
 
 ccode <- df$code[1]
 yr    <- df$year[1]
 
-# 2. CPI / PPP conversion factors from PIP, pinned to the 2021 framework.
-#    If no exact CPI match exists for this country-year, the script
-#    automatically falls back to linear interpolation between the two
-#    nearest PIP survey years (or the nearest single year at the edges).
-#    See @sec-cpi-ppp and R/03_upload_harmonized.R for details.
-cpi_table <- get_aux("cpi", ppp_version = 2021)
-cpi_exact <- cpi_table[cpi_table$country_code == ccode &
-                         as.integer(as.character(cpi_table$year)) == yr &
-                         cpi_table$data_level == "national", ]
-# exact match; for fallback logic see R/03_upload_harmonized.R
-cpi_value <- cpi_exact$value
+# 2. CPI / PPP from the latest datalibweb Support files, 2021 framework
+#    (R/utils.R). No fallback: a missing country-year stops with an error.
+#    See @sec-cpi-ppp.
+fx <- dlw_cpi_ppp(dlw_support_tables(), ccode, yr)
 
-ppp_table <- get_aux("ppp", ppp_version = 2021)
-icp_value <- ppp_table$value[ppp_table$country_code == ccode &
-                               ppp_table$data_level == "national"][1]
-
-# 3. Compute the self-reliance share and write the indicator XML —
-#    see R/03_upload_harmonized.R for the XML writer, which follows the
-#    PRIMUS XML schema (Request/Result/LOG_DETAIL sections, key;value
-#    CDATA blocks, one CALCULATION per nParamSets).
-#    3.00 is a placeholder PPP line, pending confirmation from the
-#    50by35 methodology team.
-sr <- weighted.mean(df$welfare_self / 365 / cpi_value / icp_value >= 3.00,
-                    df$weight)
+# 3. Compute the indicators and write the indicator XML (R/utils.R):
+#    self-reliance rate and poverty rate at the national line
+#    (primary, if natpovline is in the file) and at $3.00/day 2021 PPP
+#    (placeholder, pending confirmation from the 50by35 methodology
+#    team), for the whole sample and by camp.
+ind <- write_indicator_xml(df, xml_file, survey_id, fx$cpi, fx$ppp,
+                           zline = 3.00)
+ind$primary      # "National" or "International"
+ind$sr_primary   # headline self-reliance share
 
 # 4. The XML opens the transaction; then attach the data and programs
 up <- primus_upload("FDP-harmonized-data", survey_id, type = "harmonized",
-                    infile = "indicator.xml", xml = "indicator.xml")
+                    infile = xml_file, xml = xml_file)
 primus_upload("FDP-harmonized-data", survey_id, type = "harmonized",
-              infile = paste0("data/processed/", survey_id, "_WELF.dta"),
+              infile = dta_file,
               folder_name = "Data/Harmonized", transaction_id = up$transaction_id)
 primus_upload("FDP-harmonized-data", survey_id, type = "harmonized",
               infile = "Stata/COL_2023_GEIH_V01_M_V01_A_FDP_WELF.do",
@@ -118,28 +234,39 @@ primus_confirm(up$transaction_id, comments = "harmonized data ready for review")
 
 ```stata
 local surveyid "COL_2023_GEIH_V01_M_V01_A_FDP"
+local outdir   "C:/path/to/staging"    // staging folder with the harmonized file
 
 * 1. Validate: any schema violation stops before upload
-use "data/processed/`surveyid'_WELF.dta", clear
+use "`outdir'/`surveyid'_WELF.dta", clear
 do "Stata/validate_50by35.do"
+do "Stata/utils.do"
 
-* 2. CPI / 2021 PPP conversion factors from PIP (see the full script for
-*    the lookup; pip tables, table(cpi) / table(ppp))
+* 2. CPI / 2021 PPP from the latest datalibweb Support files (Stata/utils.do).
+*    No fallback: a missing country-year stops with an error. Needs the
+*    datalibweb token set in Stata. See the section above.
+local ccode = code[1]
+local year  = year[1]
+dlw_cpi_ppp, country(`ccode') year(`year')
+local cpival = r(cpi)
+local pppval = r(ppp)
 
-* 3. Build the indicator XML — see Stata/03_upload_harmonized.do, which
-*    follows the PRIMUS XML schema (Request/Result/LOG_DETAIL sections,
-*    key;value CDATA blocks) and computes the self-reliance share at
-*    $3.00/day 2021 PPP (placeholder, pending confirmation from the
-*    50by35 methodology team)
+* 3. Compute the indicators and write the indicator XML (Stata/utils.do):
+*    self-reliance rate and poverty rate at the national line
+*    (primary, if natpovline is in the file) and at $3.00/day 2021 PPP
+*    (placeholder, pending confirmation from the 50by35 methodology
+*    team), for the whole sample and by camp
+sr_indicator_xml using "`outdir'/`surveyid'.xml", surveyid(`surveyid') ///
+    cpi(`cpival') ppp(`pppval') zline(3.00)
+di "`r(primary)' line self-reliance share: " %8.6f r(sr_primary)
 
 * 4. The XML opens the transaction (xmlbl flag); the transaction ID is
 *    returned in r(prmTransId). Then attach the data and programs.
 primus upload, processid(40) surveyid(`surveyid') ///
-    type(harmonized) infile("`surveyid'.xml") xmlbl new
+    type(harmonized) infile("`outdir'/`surveyid'.xml") xmlbl new
 local tranxid = r(prmTransId)
 
 primus upload, proc(40) surveyid(`surveyid') type(harmonized) ///
-    folderpath(Data/Harmonized) infile("data/processed/`surveyid'_WELF.dta") tranxid(`tranxid')
+    folderpath(Data/Harmonized) infile("`outdir'/`surveyid'_WELF.dta") tranxid(`tranxid')
 
 primus upload, proc(40) surveyid(`surveyid') type(harmonized) ///
     folderpath(Programs) infile("Stata/COL_2023_GEIH_V01_M_V01_A_FDP_WELF.do") tranxid(`tranxid')

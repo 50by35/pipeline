@@ -5,7 +5,7 @@ Assessment of Syrian Refugees) 2023 round to the 50by35 schema
 
 Inputs : datalibweb FDPRAW — LBN_refugee_hhold.dta,
          LBN_refugee_ind.dta
-Output : ${FIFTYBY35_PROCESSED:-data/processed}/LBN_2023_VASYR_V01_M_V01_A_FDP_WELF.dta
+Output : <outdir>/LBN_2023_VASYR_V01_M_V01_A_FDP_WELF.dta
 
 Variable construction follows the WB-UNHCR Refugee Welfare Report
 replicability package (harmonized.do, Lebanon 2023 block).
@@ -21,15 +21,10 @@ set more off
 capture log close _all
 
 * ---- raw data source: datalibweb FDPRAW -------------------------------
-local dlw_token : env DLW_TOKEN
-if `"`dlw_token'"' == "" {
-    di as error "Set DLW_TOKEN in the Stata process environment"
-    exit 601
-}
-quietly datalibweb, token(`dlw_token') version(2)
+* requires the datalibweb token to be set in the datalibweb package (see Access Data)
 local dlw_surveyid "LBN_2023_VASYR_V01_M"
-local outdir : env FIFTYBY35_PROCESSED
-if `"`outdir'"' == "" local outdir "~/Github/50by35-data/data/processed"
+* staging folder where the harmonized _WELF.dta is saved: edit this line
+local outdir "C:/path/to/staging"
 
 * ---- individual + household level -----------------------------------------
 tempfile raw_household
@@ -116,7 +111,7 @@ label variable weight       "Sampling weight"
 label variable camp         "Camp/non-camp"
 label variable urban        "Urban/rural"
 label variable hhsize       "Household size"
-label variable age          "Age"
+label variable age          "Age (years)"
 label variable male         "Sex"
 label variable educat4      "Highest education (4 cat.)"
 label variable empstat      "Employment status"
@@ -127,6 +122,19 @@ order code year survname hhid pid welfare welfare_type welfare_self weight ///
       camp urban hhsize age male educat4 empstat
 
 isid hhid pid
+* strip notes, characteristics and the dataset label left over from the raw data
+notes drop _all
+local dtachars : char _dta[]
+foreach c of local dtachars {
+    char _dta[`c']
+}
+foreach v of varlist _all {
+    local varchars : char `v'[]
+    foreach c of local varchars {
+        char `v'[`c']
+    }
+}
+label data ""
 compress
 save "`outdir'/LBN_2023_VASYR_V01_M_V01_A_FDP_WELF.dta", replace
 di as result "Saved `outdir'/LBN_2023_VASYR_V01_M_V01_A_FDP_WELF.dta (`=_N' refugees)"

@@ -224,7 +224,7 @@ Use the `haven` package to read Stata data files directly into R:
 ```r
 library(haven)
 
-df <- read_dta("data/raw/household_survey.dta")
+df <- read_dta("household_survey.dta")
 
 # haven preserves Stata value labels — convert to R factors
 df <- df |>
@@ -236,7 +236,7 @@ head(df)
 To write a processed dataset back to `.dta` format:
 
 ```r
-write_dta(df_processed, "data/processed/household_clean.dta")
+write_dta(df_processed, "household_clean.dta")
 ```
 
 `haven` preserves variable labels, value labels, and Stata data types, making it the

@@ -15,47 +15,66 @@ Every harmonized file uploaded and approved through the pipeline must conform to
 
 The **unit of observation** is the individual: one row per person, with household-level variables (e.g. `welfare`, `hhid`) repeated across all members of the same household.
 
+**File-level requirements** (in addition to the variable rules below):
+
+- **One survey per file.** `code`, `year` and `survname` have the same value in every row (checked by the validators). The upload scripts read them from the first row to look up CPI/PPP.
+- **Refugee sample only.** The file contains the 50by35 monitoring population (see [Harmonize Data](02-harmonization.qmd)), with weights for that population.
+- **File name** is `<survey ID>_WELF.dta`, for example `COL_2023_GEIH_V01_M_V01_A_FDP_WELF.dta`.
+- **Every mandatory variable is a column in the file**, even where its values may be missing (see `camp` and `urban`).
+
 ## Conventions
 
-- **Type** refers to the Stata storage type of the variable in the harmonized
-  `.dta` file: `str#` (string), `byte`/`int`/`long` (integers), `float`/`double`
-  (reals). Read the equivalents in R (`character`, `integer`, `double`) via
-  [`haven`](https://haven.tidyverse.org).
+- **Type** refers to the recommended Stata storage type of the variable in the
+  harmonized `.dta` file: `str#` (string), `byte`/`int`/`long` (integers),
+  `double` (reals). Integer types are interchangeable: running `compress`
+  before saving may store an integer variable in a smaller type, which is
+  accepted. Real-valued variables (`welfare`, `welfare_self`, `weight`, `age`,
+  `natpovline`) must not be stored as `float`, which keeps only about 7
+  significant digits; `compress` never converts `double` to `float`, but may
+  store integer-valued reals as `byte`/`int`/`long`, which is accepted.
+  Storage types are checked only by the Stata validator, because
+  [`haven`](https://haven.tidyverse.org) reads every Stata numeric into R as
+  `double`; the R validator checks values only.
 - **Missing** — mandatory variables may not be missing except where noted. Use
   Stata's system missing (`.`) for genuinely unknown values; do not use numeric
   sentinels such as `-9` or `99`, or extended missing values (`.a`–`.z`).
 - **Labels** — categorical variables must carry Stata value labels; the numeric
-  codes below are authoritative and must match across all surveys.
+  codes below are authoritative and must match across all surveys. Every
+  variable should carry the text in the **Label** column as its Stata variable
+  label (`label variable`), with units in brackets where applicable; the
+  validators warn when a label differs.
 - **Identifiers** are strings to preserve leading zeros and avoid precision loss.
 
 ## Mandatory Variables
 
 | Variable | Label | Type | Unit / range | Missing | Notes |
 |---|---|---|---|---|---|
-| `code` | Country code | `str3` | ISO / WDI 3-letter | Not allowed | e.g. `AGO`, `ETH` |
+| `code` | Country code | `str3` | ISO / WDI 3-letter, uppercase | Not allowed | e.g. `AGO`, `ETH` |
 | `year` | Survey year | `int` | 1990–2035 | Not allowed | Four-digit year of data collection |
 | `survname` | Survey name | `str#` | — | Not allowed | Survey acronym (e.g. `GEIH`, `EHCVM`, `RHS`) |
 | `hhid` | Household identifier | `str` | — | Not allowed | Unique per household within the survey; string to preserve leading zeros |
-| `pid` | Person identifier | `str` | — | Not allowed | Unique per individual within the survey |
-| `welfare` | Welfare aggregate | `double` | > 0, LCU, annual per capita | Not allowed | Consumption or income aggregate from the survey's official poverty methodology  | 
-| `welfare_self` | Self-reliance-adjusted welfare | `double` | ≥ 0, LCU, annual per capita | Not allowed | Welfare measure used for the 50by35 self-reliance indicator |
+| `pid` | Person identifier | `str` | — | Not allowed | `hhid` and `pid` together must uniquely identify each row |
+| `welfare` | Welfare aggregate (LCU, annual per capita) | `double` | > 0, LCU, annual per capita | Not allowed | Consumption or income aggregate from the survey's official poverty methodology  | 
+| `welfare_self` | Self-reliance-adjusted welfare (LCU, annual per capita) | `double` | ≥ 0, LCU, annual per capita | Not allowed | Welfare net of humanitarian/social assistance, in the same units as `welfare`; must not exceed `welfare` in any row. Used for the 50by35 self-reliance indicator (see [Harmonize Data](02-harmonization.qmd)) |
 | `welfare_type` | Welfare measure type | `byte` | `1`–`3` | Not allowed | `1` = Consumption, `2` = Income, `3` = Expenditure |
 | `weight` | Sampling weight | `double` | > 0 | Not allowed | Individual sampling/population weight |
-| `camp` | Camp/non-camp | `byte` | `0`/`1` | Allowed | `0` = Non-camp, `1` = Camp |
-| `urban` | Urban/rural | `byte` | `0`/`1` | Allowed | `0` = Rural, `1` = Urban |
+| `camp` | Camp/non-camp | `byte` | `0`/`1` | Allowed | `0` = Non-camp, `1` = Camp. The variable must exist, but may be missing in every row if the survey does not identify camp residence; it still needs the value label. Used for the camp breakdown of the indicators |
+| `urban` | Urban/rural | `byte` | `0`/`1` | Allowed | `0` = Rural, `1` = Urban. The variable must exist, but may be missing in every row if the survey has no urban/rural split; it still needs the value label |
 
 ## Optional Variables
+
+Optional variables may be left out of the file entirely. When included, individual rows may be missing (`.`) except for `natpovline`, which must have a value in every row.
 
 | Variable | Label | Type | Unit / range | Notes |
 |---|---|---|---|---|
 | `hhsize` | Household size | `int` | ≥ 1 | Number of household members |
-| `age` | Age | `double` | 0–120 years | Decimal allowed for children under 5 (per GMD 2.0); integer otherwise |
+| `age` | Age (years) | `double` | 0–120 years | Decimal allowed for children under 5 (per GMD 2.0); integer otherwise |
 | `male` | Sex | `byte` | `0`/`1` | `0` = Female, `1` = Male |
 | `educat4` | Highest education (4 cat.) | `byte` | `1`–`4` | See value labels below |
 | `empstat` | Employment status | `byte` | `1`–`4` | See value labels below |
 | `strata` | Sampling strata | `int` | — | Design variable for variance estimation |
 | `psu` | Primary sampling unit | `long` | — | Design variable for variance estimation |
-| `natpovline` | National poverty line | `double` | > 0, LCU, annual per capita | Express in the same currency, reference period, and price basis as `welfare` and `welfare_self` |
+| `natpovline` | National poverty line (LCU, annual per capita) | `double` | > 0, LCU, annual per capita | Express in the same currency, reference period, and price basis as `welfare` and `welfare_self`. If included, it must be non-missing in every row. When present, it is the line for the **primary** 50by35 self-reliance indicator |
 | `arrival_year` | Year of arrival | `int` | 1900–survey year | Year the individual arrived in the host country |
 
 ## Value Labels
@@ -88,4 +107,20 @@ Categorical variables must use these codes and labels exactly.
 
 ## Validation
 
-These variables and value-label codes are enforced by the validation scripts (`Stata/validate_50by35.do`, `R/validate_50by35.R`), which run before every harmonized upload. Any deviation from the schema triggers an error and prevents the harmonized file from being uploaded to datalibweb. Checks include mandatory-variable presence and missingness, identifier formats and uniqueness, value ranges and categorical labels, and integer constraints. Optional variables may be omitted; when included, non-missing `natpovline` values must be positive and non-missing `arrival_year` values must be integer years between 1900 and the survey year. Households where `hhsize` differs from the number of `pid` records are flagged with a warning rather than an error, since rosters can be incomplete and refugee-only samples keep a subset of household members.
+The validation scripts (`Stata/validate_50by35.do`, `R/validate_50by35.R`) run before every harmonized upload. An **error** stops the upload; a **warning** is printed and the upload continues.
+
+| Result | What is checked |
+|---|---|
+| **Error** | All mandatory variables are present, with no missing values except `camp` and `urban`. |
+| **Error** | `code` is a 3-letter uppercase string; `survname`, `hhid` and `pid` are non-empty strings; `hhid` + `pid` is unique. |
+| **Error** | One survey per file: `code`, `year` and `survname` are constant across all rows. |
+| **Error** | No extended missing values (`.a`–`.z`) in any numeric variable; use system missing (`.`). |
+| **Error** | Ranges:`year` is an integer in 1990–2035; `welfare` and `weight` are > 0; `welfare_self` is ≥ 0 and ≤ `welfare`; `welfare_type` is 1–3; `camp` and `urban` are 0, 1 or missing. |
+| **Error** | Categorical variables (`welfare_type`, `camp`, `urban`, and `male`, `educat4`, `empstat` when present) carry value labels with exactly the codes and text shown above: no extra and no missing codes. |
+| **Error** | Optional variables, when present, are in range: `hhsize` is an integer ≥ 1; `age` is 0–120 and an integer from age 5; `male` is 0/1; `educat4` and `empstat` are 1–4; `strata` and `psu` are integers; `arrival_year` is an integer from 1900 to the survey year; `natpovline` is > 0 and non-missing in every row. |
+| **Error** (Stata only) | Storage types: integer variables use `byte`/`int`/`long`, and real variables are not `float`. |
+| **Warning** | `hhsize` differs from the number of `pid` records in the household. Rosters can be incomplete, and refugee-only samples keep a subset of household members. |
+| **Warning** | A variable label differs from the **Label** column above. |
+| **Warning** (Stata only) | The file has notes, characteristics or a dataset label left over from the raw data. Clear them before saving. R cannot see them. |
+
+The validators do **not** check for numeric sentinel codes (e.g. `-9`, `99`) in variables without a range check (such as `strata` and `psu`), or the file name. These are still required: check them in your harmonization script.

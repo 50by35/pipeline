@@ -4,7 +4,7 @@ TCD_2018_EHCVM_V01_M_V01_A_FDP_WELF.do
 
 Inputs : datalibweb FDPRAW — household_TCD_2018.dta,
          individual_TCD_2018.dta
-Output : ${FIFTYBY35_PROCESSED:-data/processed}/TCD_2018_EHCVM_V01_M_V01_A_FDP_WELF.dta
+Output : <outdir>/TCD_2018_EHCVM_V01_M_V01_A_FDP_WELF.dta
 
 Variable construction follows the WB-UNHCR Refugee Welfare Report
 replicability package (harmonized.do, Chad 2018 block).
@@ -18,15 +18,10 @@ set more off
 capture log close _all
 
 * ---- raw data source: datalibweb FDPRAW -------------------------------
-local dlw_token : env DLW_TOKEN
-if `"`dlw_token'"' == "" {
-    di as error "Set DLW_TOKEN in the Stata process environment"
-    exit 601
-}
-quietly datalibweb, token(`dlw_token') version(2)
+* requires the datalibweb token to be set in the datalibweb package (see Access Data)
 local dlw_surveyid "TCD_2018_EHCVM_V01_M"
-local outdir : env FIFTYBY35_PROCESSED
-if `"`outdir'"' == "" local outdir "~/Github/50by35-data/data/processed"
+* staging folder where the harmonized _WELF.dta is saved: edit this line
+local outdir "C:/path/to/staging"
 
 * ---- household level ----------------------------------------------------
 tempfile raw_individual
@@ -87,6 +82,7 @@ rename hhsize2 hhsize
 gen double age     = ageyrs
 replace    age     = . if !inrange(age, 0, 120)   // 9999 = unknown in source
 gen byte   male    = gender          // source: 0 Female / 1 Male
+replace    male    = . if missing(male)          // source has extended missing (.a-.z)
 gen byte   educat4 = education       // source already 1 None … 4 Tertiary
 gen byte   empstat = empstatus7      // 1 Employed 2 Unemployed 3 Inactive
 replace    empstat = 4 if missing(empstat) & age < 15   // not applicable
@@ -116,7 +112,7 @@ label variable weight       "Sampling weight"
 label variable camp         "Camp/non-camp"
 label variable urban        "Urban/rural"
 label variable hhsize       "Household size"
-label variable age          "Age"
+label variable age          "Age (years)"
 label variable male         "Sex"
 label variable educat4      "Highest education (4 cat.)"
 label variable empstat      "Employment status"
@@ -128,6 +124,19 @@ order code year survname hhid pid welfare welfare_type welfare_self weight ///
       camp urban hhsize age male educat4 empstat psu
 
 isid hhid pid
+* strip notes, characteristics and the dataset label left over from the raw data
+notes drop _all
+local dtachars : char _dta[]
+foreach c of local dtachars {
+    char _dta[`c']
+}
+foreach v of varlist _all {
+    local varchars : char `v'[]
+    foreach c of local varchars {
+        char `v'[`c']
+    }
+}
+label data ""
 compress
 save "`outdir'/TCD_2018_EHCVM_V01_M_V01_A_FDP_WELF.dta", replace
 di as result "Saved `outdir'/TCD_2018_EHCVM_V01_M_V01_A_FDP_WELF.dta (`=_N' refugees)"

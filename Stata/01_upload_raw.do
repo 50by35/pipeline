@@ -15,11 +15,8 @@ version 18
 clear
 set more off
 
-local rawroot : env REFUGEE_RAW_DATA
-if `"`rawroot'"' == "" {
-    di as error "Set REFUGEE_RAW_DATA to the raw-data root folder"
-    exit 601
-}
+* folder that holds your raw data files: edit this line
+local rawroot "C:/path/to/raw-data"
 
 * ---- parameters: uncomment ONE survey block ------------------------------
 local processid 39                       // FDPRaw-data

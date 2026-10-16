@@ -1,14 +1,14 @@
 /* =====================================================================
-CRI_2023_ENAHO_V01_M_V01_A_FDP_WELF.do
-50by35 pipeline — Step 2: harmonize Costa Rica ENAHO 2023 to the
+CRI_2024_ENAHO_V01_M_V01_A_FDP_WELF.do
+50by35 pipeline — Step 2: harmonize Costa Rica ENAHO 2024 to the
 50by35 schema
 
-Inputs : datalibweb FDPRAW — 2023 - households (with ppp21).dta,
-         2023 - individuals (with ppp21).dta
-Output : ${FIFTYBY35_PROCESSED:-data/processed}/CRI_2023_ENAHO_V01_M_V01_A_FDP_WELF.dta
+Inputs : datalibweb FDPRAW — 2024 - households (with ppp21).dta,
+         2024 - individuals (with ppp21).dta
+Output : <outdir>/CRI_2024_ENAHO_V01_M_V01_A_FDP_WELF.dta
 
 Variable construction follows the WB-UNHCR Refugee Welfare Report
-replicability package (harmonized.do, Costa Rica 2023 block), with
+replicability package (harmonized.do, Costa Rica 2024 block), with
 welfare_self added: the source computed household income components
 (inc_asst from timas_hh + ts_hh, assistance/subsidy transfers) but
 never netted them out of welfare — this script does, applying the same
@@ -25,23 +25,18 @@ set more off
 capture log close _all
 
 * ---- raw data source: datalibweb FDPRAW -------------------------------
-local dlw_token : env DLW_TOKEN
-if `"`dlw_token'"' == "" {
-    di as error "Set DLW_TOKEN in the Stata process environment"
-    exit 601
-}
-quietly datalibweb, token(`dlw_token') version(2)
-local dlw_surveyid "CRI_2023_ENAHO_V01_M"
-local outdir : env FIFTYBY35_PROCESSED
-if `"`outdir'"' == "" local outdir "~/Github/50by35-data/data/processed"
+* requires the datalibweb token to be set in the datalibweb package (see Access Data)
+local dlw_surveyid "CRI_2024_ENAHO_V01_M"
+* staging folder where the harmonized _WELF.dta is saved: edit this line
+local outdir "C:/path/to/staging"
 
 * ---- household level ----------------------------------------------------
 tempfile raw_individual
-datalibweb, country(CRI) years(2023) type(FDPRAW) ///
-    surveyid(`dlw_surveyid') filename("2023 - individuals (with ppp21).dta") clear
+datalibweb, country(CRI) years(2024) type(FDPRAW) ///
+    surveyid(`dlw_surveyid') filename("2024 - individuals (with ppp21).dta") clear
 save `raw_individual'
-datalibweb, country(CRI) years(2023) type(FDPRAW) ///
-    surveyid(`dlw_surveyid') filename("2023 - households (with ppp21).dta") clear
+datalibweb, country(CRI) years(2024) type(FDPRAW) ///
+    surveyid(`dlw_surveyid') filename("2024 - households (with ppp21).dta") clear
 
 * welfare: income per capita per day, already real/PPP-adjusted
 * (ipcf_a_day_ppp21), annualized to LCU (CRC). welfare_type = 2 (income).
@@ -58,7 +53,7 @@ drop asst ipcf_self
 
 * ---- merge individuals ---------------------------------------------------
 merge 1:m hhid using `raw_individual', ///
-    keep(3) nogen keepusing(pid lugnac a4 a5 nivinst condact ramaemppri)
+    keep(3) nogen keepusing(pid lugnac a4 a5 nivinst condact)
 
 * refugees only: Nicaraguan-born
 keep if lugnac==2
@@ -120,7 +115,7 @@ label variable weight       "Sampling weight"
 label variable camp         "Camp/non-camp"
 label variable urban        "Urban/rural"
 label variable hhsize       "Household size"
-label variable age          "Age"
+label variable age          "Age (years)"
 label variable male         "Sex"
 label variable educat4      "Highest education (4 cat.)"
 label variable empstat      "Employment status"
@@ -131,6 +126,19 @@ order code year survname hhid pid welfare welfare_type welfare_self weight ///
       camp urban hhsize age male educat4 empstat
 
 isid hhid pid
+* strip notes, characteristics and the dataset label left over from the raw data
+notes drop _all
+local dtachars : char _dta[]
+foreach c of local dtachars {
+    char _dta[`c']
+}
+foreach v of varlist _all {
+    local varchars : char `v'[]
+    foreach c of local varchars {
+        char `v'[`c']
+    }
+}
+label data ""
 compress
-save "`outdir'/CRI_2023_ENAHO_V01_M_V01_A_FDP_WELF.dta", replace
-di as result "Saved `outdir'/CRI_2023_ENAHO_V01_M_V01_A_FDP_WELF.dta (`=_N' refugees)"
+save "`outdir'/CRI_2024_ENAHO_V01_M_V01_A_FDP_WELF.dta", replace
+di as result "Saved `outdir'/CRI_2024_ENAHO_V01_M_V01_A_FDP_WELF.dta (`=_N' refugees)"

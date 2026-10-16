@@ -5,7 +5,7 @@ harmonized-data transactions via PRIMUS (Stata client).
 
 Workflow:
   1. Queries PRIMUS for all pending harmonized-data transactions.
-  2. Writes batch/04_harmonized_reviews.csv with decision defaulting
+  2. Writes <outdir>/manifests/04_harmonized_reviews.csv with decision defaulting
      to "approve". Edit the CSV to change decisions or comments before
      the script proceeds.
   3. Reads the CSV back and processes each row.
@@ -20,8 +20,12 @@ version 18
 clear
 set more off
 
+* staging folder: edit this line; the manifest is written to <outdir>/manifests
+local outdir "C:/path/to/staging"
+
 local processid 40                       // FDP-harmonized-data
-local manifest  "batch/04_harmonized_reviews.csv"
+capture mkdir "`outdir'/manifests"
+local manifest  "`outdir'/manifests/04_harmonized_reviews.csv"
 
 * ---- auto-generate manifest from pending transactions ------------------------
 di as result "=== Querying pending harmonized-data transactions ==="

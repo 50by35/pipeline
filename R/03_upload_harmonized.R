@@ -7,29 +7,37 @@
 # self-reliance indicator for the reviewer to approve; the data and
 # harmonization scripts are then attached to the same transaction.
 #
-# The XML is written directly by this script. PRIMUS accepts a
+# The primary indicator uses the national poverty line (natpovline) when it
+# is in the file; the $3.00/day 2021 PPP line is always reported as a
+# secondary indicator. Both are reported for the whole sample and by camp.
+#
+# The XML is written by write_indicator_xml() in R/utils.R. PRIMUS accepts a
 # team-defined XML as long as it follows the main heading format
 # (<PRIMUS_ANALYSIS><Request>...<Result>); the same structure is written
-# by Stata/03_upload_harmonized.do. For the full standard GMD indicator
+# by sr_indicator_xml in Stata/utils.do. For the full standard GMD indicator
 # document (Gini, deciles, FGT at the fixed $3.00/$4.20/$8.30 lines),
 # primus::create_xml() is an alternative, but it has no self-reliance
 # field and its poverty-line set cannot be customized.
 #
-# CPI and 2021 PPP conversion factors come from the World Bank PIP API
-# via the pipr package (install.packages("pipr")). z = $3.00/day 2021 PPP.
+# CPI and 2021 PPP conversion factors come from the latest version of the
+# datalibweb Support files (Yearly_CPI_Final.dta, pppdata_allvintages.dta;
+# see dlw_support_tables() in R/utils.R) and apply only to the international
+# line, z = $3.00/day 2021 PPP; natpovline is already in LCU.
 #
-# Requires: primus R package + stored token; pipr; haven.
+# Requires: primus and dlw R packages + stored tokens; haven.
 # Run from the repository root. The process name (FDP-harmonized-data)
 # is illustrative — verify with primus_list_processes().
 # =====================================================================
 
 library(primus)
-library(pipr)
+library(dlw)
 library(haven)
 
 source("R/validate_50by35.R")
+source("R/utils.R")
 
-outdir <- Sys.getenv("FIFTYBY35_PROCESSED", "data/processed")
+# staging folder with the harmonized _WELF.dta files (the XML is written here too): edit this line
+outdir <- "C:/path/to/staging"
 
 # ---- parameters: pick ONE survey block --------------------------------------
 process_name <- "FDP-harmonized-data"
@@ -47,11 +55,9 @@ harm_script <- "Stata/COL_2023_GEIH_V01_M_V01_A_FDP_WELF.do"
 
 dta_file <- file.path(outdir, paste0(survey_id, "_WELF.dta"))
 
-# PIP's CPI is only populated for country-years with a PIP survey. For
-# surveys outside PIP (e.g. UGA_2018_RHS), set cpi_override to the ratio
-# CPI(survey year)/CPI(2021) from the national CPI series (e.g. WDI
-# FP.CPI.TOTL); the Uganda 2018 value from the report package is
-# 171.14172/185.89218 = 0.92066.
+# Leave NA to use the latest datalibweb Support CPI and PPP. To override,
+# set cpi_override to the ratio CPI(survey year)/CPI(2021) and ppp_override
+# to the 2021 PPP conversion factor (LCU per international $).
 cpi_override <- NA
 ppp_override <- NA
 
@@ -62,170 +68,27 @@ validate_50by35(df)
 ccode <- df$code[1]
 year  <- df$year[1]
 
-# ---- CPI / PPP conversion factors from PIP, pinned to the 2021 framework ------
-# CPI: normalized to 1 in 2021, aligned to the survey fieldwork period.
-# PPP: ICP 2021 conversion factor (LCU per 2021 international $).
-
-# CPI fallback: interpolate or use nearest year when exact match unavailable
-get_cpi_fallback <- function(cpi_table, ccode, yr) {
-  cc <- cpi_table[cpi_table$country_code == ccode &
-                    cpi_table$data_level == "national" &
-                    !is.na(cpi_table$value), ]
-  if (nrow(cc) == 0) stop("PIP has no CPI data at all for ", ccode)
-
-  cc$yr_num <- as.integer(as.character(cc$year))
-  below <- cc[cc$yr_num <= yr, ]
-  above <- cc[cc$yr_num >= yr, ]
-
-  if (nrow(below) > 0 && nrow(above) > 0) {
-    lo <- below[which.max(below$yr_num), ]
-    hi <- above[which.min(above$yr_num), ]
-    if (lo$yr_num == hi$yr_num) {
-      return(list(value = lo$value, method = "EmbeddedCPI"))
-    }
-    frac <- (yr - lo$yr_num) / (hi$yr_num - lo$yr_num)
-    cpi_val <- lo$value + frac * (hi$value - lo$value)
-    method <- sprintf("Interpolated(CPI_%s=%.6f,CPI_%s=%.6f)",
-                      lo$yr_num, lo$value, hi$yr_num, hi$value)
-    return(list(value = cpi_val, method = method))
-  }
-
-  nearest <- cc[which.min(abs(cc$yr_num - yr)), ]
-  method <- sprintf("NearestYear(CPI_%s=%.6f)", nearest$yr_num, nearest$value)
-  return(list(value = nearest$value, method = method))
+# ---- CPI / PPP conversion factors from the datalibweb Support files ------------
+# CPI: survey-year annual CPI relative to 2021 (1 in 2021).
+# PPP: ICP 2021 conversion factor (LCU per 2021 international $), latest vintage.
+# Both are the latest version in datalibweb; there is no fallback, so a missing
+# country-year stops here (set cpi_override / ppp_override above instead).
+if (is.na(cpi_override) || is.na(ppp_override)) {
+  dlw_factors <- dlw_cpi_ppp(dlw_support_tables(), ccode, year)
 }
-
-cpi_method <- "EmbeddedCPI"  # default; updated if fallback used
-
-if (is.na(cpi_override)) {
-  cpi <- get_aux("cpi", ppp_version = 2021)
-  cpi_exact <- cpi[cpi$country_code == ccode &
-                     as.integer(as.character(cpi$year)) == year &
-                     cpi$data_level == "national", ]
-  if (nrow(cpi_exact) == 1 && !is.na(cpi_exact$value)) {
-    cpi_value <- cpi_exact$value
-  } else {
-    fb <- get_cpi_fallback(cpi, ccode, year)
-    cpi_value  <- fb$value
-    cpi_method <- fb$method
-    message("CPI fallback: ", cpi_method)
-  }
-} else {
-  cpi_value <- cpi_override
-  cpi_method <- "ManualOverride"
-}
-
-if (is.na(ppp_override)) {
-  ppp <- get_aux("ppp", ppp_version = 2021)
-  ppp <- ppp[ppp$country_code == ccode & ppp$data_level == "national", ]
-  if (nrow(ppp) < 1 || is.na(ppp$value[1]))
-    stop("PIP has no 2021 PPP for ", ccode, " — set ppp_override")
-  icp_value <- ppp$value[1]
-} else icp_value <- ppp_override
+cpi_value <- if (is.na(cpi_override)) dlw_factors$cpi else cpi_override
+icp_value <- if (is.na(ppp_override)) dlw_factors$ppp else ppp_override
 
 message("CPI(", ccode, ",", year, ") = ", cpi_value,
         "   PPP2021(", ccode, ") = ", icp_value)
 
-# ---- 50by35 self-reliance indicator --------------------------------------------
-sr_share <- weighted.mean(df$welfare_self / 365 / cpi_value / icp_value >= zline,
-                          df$weight)
-headcount <- weighted.mean(df$welfare / 365 / cpi_value / icp_value < zline,
-                           df$weight)
-mean_lcu      <- weighted.mean(df$welfare, df$weight)
-mean_lcu_self <- weighted.mean(df$welfare_self, df$weight)
-message(sprintf("Self-reliance share (z=$%.2f/day 2021 PPP): %.4f", zline, sr_share))
-
-# ---- write the indicator XML (PRIMUS XML schema for harmonized data) -----------
-# Sections: Request (RequestKey, welfare, weight, By, N_By_Group, nParamSets,
-# plus a key;value CDATA block of run metadata), Result (one <Welfare> per
-# welfare variable, containing one <ByGroup> per N_By_Group with a
-# <DATASUMMARY> and one <CALCULATION> per nParamSets, each a key;value CDATA
-# block), and LOG_DETAIL (free-text CDATA, not shown in the approval table).
-kv <- function(...) {
-  vals <- c(...)
-  paste(names(vals), vals, sep = ";")
-}
-cdata_block <- function(lines) c("<![CDATA[", "key;value", lines, "]]>")
-
-request_cdata <- cdata_block(kv(
-  APP_ID       = "R",
-  DATETIME     = format(Sys.time(), "%d %b %Y %H:%M:%S"),
-  COUNTRY_CODE = ccode,
-  FILENAME     = basename(dta_file),
-  DATA_YEAR    = year,
-  REF_YEAR     = year,
-  PPP_YEAR     = "2021"
-))
-
-datasummary_cdata <- cdata_block(kv(
-  nRecs                 = nrow(df),
-  Mean_LCU_welfare      = sprintf("%.2f", mean_lcu),
-  Mean_LCU_welfare_self = sprintf("%.2f", mean_lcu_self)
-))
-
-calc_headcount_cdata <- cdata_block(kv(
-  Indicator   = "PovertyHeadcount",
-  Variable    = "welfare",
-  PovertyLine = sprintf("%.2f", zline),
-  Method      = cpi_method,
-  CPIValue    = sprintf("%.6f", cpi_value),
-  PPPValue    = sprintf("%.6f", icp_value),
-  Value       = sprintf("%.6f", headcount)
-))
-
-calc_selfreliance_cdata <- cdata_block(kv(
-  Indicator   = "SelfRelianceShare",
-  Variable    = "welfare_self",
-  PovertyLine = sprintf("%.2f", zline),
-  Method      = cpi_method,
-  CPIValue    = sprintf("%.6f", cpi_value),
-  PPPValue    = sprintf("%.6f", icp_value),
-  Value       = sprintf("%.6f", sr_share)
-))
-
-log_detail_cdata <- c(
-  "<![CDATA[",
-  sprintf("50by35 self-reliance indicator for %s.", survey_id),
-  sprintf(paste0("welfare_self / 365 / CPI(%s,%s)=%.6f / PPP2021(%s)=%.6f >= z=%.2f",
-                 " (placeholder, pending confirmation from the 50by35 methodology team)."),
-          ccode, year, cpi_value, ccode, icp_value, zline),
-  sprintf("PovertyHeadcount (welfare, same z): %.6f", headcount),
-  sprintf("SelfRelianceShare (welfare_self): %.6f", sr_share),
-  "]]>"
-)
-
+# ---- 50by35 indicators + indicator XML (see R/utils.R) -------------------------
+# National line (primary, if natpovline is in the file) and $3.00/day 2021 PPP
+# line, for the whole sample and by camp status.
 xml_file <- file.path(outdir, paste0(survey_id, ".xml"))
-writeLines(c(
-  "<PRIMUS_ANALYSIS>",
-  "  <Request>",
-  "    <RequestKey><![CDATA[]]></RequestKey>",
-  "    <welfare>welfare_self</welfare>",
-  "    <weight>weight</weight>",
-  "    <By></By>",
-  "    <N_By_Group>1</N_By_Group>",
-  "    <nParamSets>2</nParamSets>",
-  paste0("    ", request_cdata),
-  "  </Request>",
-  "  <Result>",
-  '    <Welfare var="welfare_self" weight="weight">',
-  '      <ByGroup byCondition="none">',
-  "        <DATASUMMARY>",
-  paste0("          ", datasummary_cdata),
-  "        </DATASUMMARY>",
-  "        <CALCULATION>",
-  paste0("          ", calc_headcount_cdata),
-  "        </CALCULATION>",
-  "        <CALCULATION>",
-  paste0("          ", calc_selfreliance_cdata),
-  "        </CALCULATION>",
-  "      </ByGroup>",
-  "    </Welfare>",
-  "  </Result>",
-  "  <LOG_DETAIL>",
-  paste0("    ", log_detail_cdata),
-  "  </LOG_DETAIL>",
-  "</PRIMUS_ANALYSIS>"
-), xml_file)
+ind <- write_indicator_xml(df, xml_file, survey_id, cpi_value, icp_value, zline)
+message(sprintf("Self-reliance share (%s line): %.4f", ind$primary, ind$sr_primary))
+message(sprintf("Self-reliance share (z=$%.2f/day 2021 PPP): %.4f", zline, ind$sr_intl))
 message("Wrote ", xml_file)
 
 # ---- upload: XML opens the transaction, then attach data + programs -----------

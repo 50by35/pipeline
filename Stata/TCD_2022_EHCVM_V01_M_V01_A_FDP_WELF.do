@@ -1,17 +1,15 @@
 /* =====================================================================
-NER_2018_EHCVM_V01_M_V01_A_FDP_WELF.do
-50by35 pipeline — Step 2: harmonize Niger EHCVM 2018 to the 50by35 schema
+TCD_2022_EHCVM_V01_M_V01_A_FDP_WELF.do
+50by35 pipeline — Step 2: harmonize Chad EHCVM 2022 to the 50by35 schema
 
-Inputs : datalibweb FDPRAW — household_NER_2018.dta,
-         individual_NER_2018.dta
-Output : ${FIFTYBY35_PROCESSED:-data/processed}/NER_2018_EHCVM_V01_M_V01_A_FDP_WELF.dta
+Inputs : datalibweb FDPRAW — household_TCD_2022.dta,
+         individual_TCD_2022.dta
+Output : <outdir>/TCD_2022_EHCVM_V01_M_V01_A_FDP_WELF.dta
 
 Variable construction follows the WB-UNHCR Refugee Welfare Report
-replicability package (harmonized.do, Niger 2018 block).
-Sample: refugees only — pop_group 2 (refugees from Mali), 3 (refugees
-from Nigeria). IDPs (1, "Displaced from Niger"), hosts (4), and
-Nigeriens (5) are dropped — the 50by35 monitoring population excludes
-internally displaced persons.
+replicability package (harmonized.do, Chad 2022 block).
+Sample: refugees only — pop_group 1 (east/Sudan), 2 (south/CAR),
+6 (other countries). Hosts (3, 4) and Chadians (5) are dropped.
 ===================================================================== */
 
 version 18
@@ -20,26 +18,21 @@ set more off
 capture log close _all
 
 * ---- raw data source: datalibweb FDPRAW -------------------------------
-local dlw_token : env DLW_TOKEN
-if `"`dlw_token'"' == "" {
-    di as error "Set DLW_TOKEN in the Stata process environment"
-    exit 601
-}
-quietly datalibweb, token(`dlw_token') version(2)
-local dlw_surveyid "NER_2018_EHCVM_V01_M"
-local outdir : env FIFTYBY35_PROCESSED
-if `"`outdir'"' == "" local outdir "~/Github/50by35-data/data/processed"
+* requires the datalibweb token to be set in the datalibweb package (see Access Data)
+local dlw_surveyid "TCD_2022_EHCVM_V01_M"
+* staging folder where the harmonized _WELF.dta is saved: edit this line
+local outdir "C:/path/to/staging"
 
 * ---- household level ----------------------------------------------------
 tempfile raw_individual
-datalibweb, country(NER) years(2018) type(FDPRAW) ///
-    surveyid(`dlw_surveyid') filename(individual_NER_2018.dta) clear
+datalibweb, country(TCD) years(2022) type(FDPRAW) ///
+    surveyid(`dlw_surveyid') filename(individual_TCD_2022.dta) clear
 save `raw_individual'
-datalibweb, country(NER) years(2018) type(FDPRAW) ///
-    surveyid(`dlw_surveyid') filename(household_NER_2018.dta) clear
+datalibweb, country(TCD) years(2022) type(FDPRAW) ///
+    surveyid(`dlw_surveyid') filename(household_TCD_2022.dta) clear
 
 * welfare: HH nominal annual consumption (dtot), spatially deflated,
-* per capita, in LCU (XOF). welfare_type = 1 (consumption).
+* per capita, in LCU (XAF). welfare_type = 1 (consumption).
 gen double welfare = (dtot/def_spa)/hhsize
 
 * welfare_self: welfare net of aid income (income_aid, annual, HH level),
@@ -51,16 +44,11 @@ merge 1:m grappe menage using `raw_individual'
 keep if _merge==3
 drop _merge
 
-* refugees only — excludes IDPs (pop_group==1)
-keep if inlist(pop_group, 2, 3)
-
-* households without a consumption aggregate cannot conform to the schema
-qui count if missing(welfare)
-di as txt "Dropping " r(N) " observations with missing consumption aggregate"
-drop if missing(welfare)
+* refugees only
+keep if inlist(pop_group, 1, 2, 6)
 
 * ---- schema variables ----------------------------------------------------
-gen str3 code = "NER"
+gen str3 code = "TCD"
 gen int  year        = surveyyear
 gen      survname    = "EHCVM"
 
@@ -118,7 +106,7 @@ label variable weight       "Sampling weight"
 label variable camp         "Camp/non-camp"
 label variable urban        "Urban/rural"
 label variable hhsize       "Household size"
-label variable age          "Age"
+label variable age          "Age (years)"
 label variable male         "Sex"
 label variable educat4      "Highest education (4 cat.)"
 label variable empstat      "Employment status"
@@ -130,6 +118,19 @@ order code year survname hhid pid welfare welfare_type welfare_self weight ///
       camp urban hhsize age male educat4 empstat psu
 
 isid hhid pid
+* strip notes, characteristics and the dataset label left over from the raw data
+notes drop _all
+local dtachars : char _dta[]
+foreach c of local dtachars {
+    char _dta[`c']
+}
+foreach v of varlist _all {
+    local varchars : char `v'[]
+    foreach c of local varchars {
+        char `v'[`c']
+    }
+}
+label data ""
 compress
-save "`outdir'/NER_2018_EHCVM_V01_M_V01_A_FDP_WELF.dta", replace
-di as result "Saved `outdir'/NER_2018_EHCVM_V01_M_V01_A_FDP_WELF.dta (`=_N' refugees)"
+save "`outdir'/TCD_2022_EHCVM_V01_M_V01_A_FDP_WELF.dta", replace
+di as result "Saved `outdir'/TCD_2022_EHCVM_V01_M_V01_A_FDP_WELF.dta (`=_N' refugees)"

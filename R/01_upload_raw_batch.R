@@ -3,20 +3,22 @@
 # 50by35 pipeline — Step 1 (batch): upload raw microdata for multiple
 # surveys via PRIMUS (R client).
 #
-# Reads batch/01_raw_uploads.csv with columns:
+# Reads <outdir>/manifests/01_raw_uploads.csv with columns:
 #   survey_id  — e.g. "COL_2023_GEIH_V01_M"
-#   files      — semicolon-separated paths relative to $REFUGEE_RAW_DATA
-#   docs       — (optional) semicolon-separated doc paths relative to $REFUGEE_RAW_DATA
+#   files      - semicolon-separated paths relative to rawroot (set below)
+#   docs       - (optional) semicolon-separated doc paths relative to rawroot
 #
 # Failures are logged and skipped; a summary is printed at the end.
 # =====================================================================
 
 library(primus)
 
-manifest <- read.csv("batch/01_raw_uploads.csv", stringsAsFactors = FALSE)
+# ---- folders: edit these two lines -------------------------------------------
+outdir  <- "C:/path/to/staging"     # staging folder; the manifest is in <outdir>/manifests
+rawroot <- "C:/path/to/raw-data"    # folder that holds your raw data files
 
-rawroot <- Sys.getenv("REFUGEE_RAW_DATA")
-if (rawroot == "") stop("Set REFUGEE_RAW_DATA to the raw-data root folder")
+manifest <- read.csv(file.path(outdir, "manifests", "01_raw_uploads.csv"),
+                     stringsAsFactors = FALSE)
 
 process_name <- "FDPRaw-data"
 
