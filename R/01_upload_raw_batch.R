@@ -5,8 +5,8 @@
 #
 # Reads <outdir>/manifests/01_raw_uploads.csv with columns:
 #   survey_id  — e.g. "COL_2023_GEIH_V01_M"
-#   files      — semicolon-separated paths relative to rawroot (set below)
-#   docs       — (optional) semicolon-separated doc paths relative to rawroot
+#   files      - semicolon-separated paths relative to rawroot (set below)
+#   docs       - (optional) semicolon-separated doc paths relative to rawroot
 #
 # Failures are logged and skipped; a summary is printed at the end.
 # =====================================================================

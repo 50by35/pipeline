@@ -3,9 +3,9 @@
 50by35 pipeline — Step 1 (batch): upload raw microdata for multiple
 surveys via PRIMUS (Stata client).
 
-Reads `outdir'/manifests/01_raw_uploads.csv with columns:
+Reads <outdir>/manifests/01_raw_uploads.csv with columns:
   survey_id  — e.g. "COL_2023_GEIH_V01_M"
-  files      — semicolon-separated paths relative to rawroot (set below)
+  files      - semicolon-separated paths relative to rawroot (set below)
   docs       — (optional) semicolon-separated doc paths
 
 Failures are logged and skipped; a summary is printed at the end.
@@ -16,7 +16,7 @@ clear
 set more off
 
 * ---- folders: edit these two lines -------------------------------------------
-local outdir  "C:/path/to/staging"      // staging folder; the manifest is in `outdir'/manifests
+local outdir  "C:/path/to/staging"      // staging folder; the manifest is in <outdir>/manifests
 local rawroot "C:/path/to/raw-data"     // folder that holds your raw data files
 
 local processid 39                       // FDPRaw-data

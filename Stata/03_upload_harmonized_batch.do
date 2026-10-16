@@ -6,7 +6,7 @@ upload harmonized files for multiple surveys via PRIMUS (Stata client).
 Workflow:
   1. Scans the staging folder (outdir) for files ending in _WELF.dta and
      matches each to its harmonization script, Stata/<survey ID>_WELF.do.
-  2. Writes `outdir'/manifests/03_harmonized_uploads.csv with the discovered
+  2. Writes <outdir>/manifests/03_harmonized_uploads.csv with the discovered
      surveys. Edit the CSV to remove rows, add cpi/ppp overrides,
      etc. before the script proceeds.
   3. Reads the CSV back and processes each row.

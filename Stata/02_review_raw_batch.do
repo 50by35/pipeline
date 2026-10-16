@@ -5,7 +5,7 @@ raw-data transactions via PRIMUS (Stata client).
 
 Workflow:
   1. Queries PRIMUS for all pending raw-data transactions.
-  2. Writes `outdir'/manifests/02_raw_reviews.csv with decision defaulting to
+  2. Writes <outdir>/manifests/02_raw_reviews.csv with decision defaulting to
      "approve". Edit the CSV to change decisions or comments before
      the script proceeds.
   3. Reads the CSV back and processes each row.
@@ -18,7 +18,7 @@ version 18
 clear
 set more off
 
-* staging folder: edit this line; the manifest is written to `outdir'/manifests
+* staging folder: edit this line; the manifest is written to <outdir>/manifests
 local outdir "C:/path/to/staging"
 
 local processid 39                       // FDPRaw-data
