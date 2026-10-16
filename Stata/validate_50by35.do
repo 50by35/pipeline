@@ -376,4 +376,22 @@ foreach v in code year survname hhid pid welfare welfare_self welfare_type ///
     }
 }
 
+* ---- notes, characteristics and dataset label (warning only) -----------------
+* These are leftovers from the raw data (reshape bookkeeping, svyset settings,
+* notes). They do not affect the indicators but should not travel with the file.
+* R cannot see them (haven drops them), so this check is Stata only.
+local dtachars : char _dta[]
+local nchars : word count `dtachars'
+foreach v of varlist _all {
+    local varchars : char `v'[]
+    local nchars = `nchars' + `: word count `varchars''
+}
+if `nchars' > 0 {
+    di as txt "SCHEMA WARNING: file has `nchars' notes/characteristics left over from the raw data; clear them before saving (notes drop _all; char)"
+}
+local dlabel : data label
+if `"`dlabel'"' != "" {
+    di as txt `"SCHEMA WARNING: dataset label is "`dlabel'"; clear it with label data """'
+}
+
 di as result "50by35 schema validation PASSED (`=_N' observations)"

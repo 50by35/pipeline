@@ -121,5 +121,6 @@ The validation scripts (`Stata/validate_50by35.do`, `R/validate_50by35.R`) run b
 | **Error** (Stata only) | Storage types: integer variables use `byte`/`int`/`long`, and real variables are not `float`. |
 | **Warning** | `hhsize` differs from the number of `pid` records in the household. Rosters can be incomplete, and refugee-only samples keep a subset of household members. |
 | **Warning** | A variable label differs from the **Label** column above. |
+| **Warning** (Stata only) | The file has notes, characteristics or a dataset label left over from the raw data. Clear them before saving. R cannot see them. |
 
 The validators do **not** check for numeric sentinel codes (e.g. `-9`, `99`) in variables without a range check (such as `strata` and `psu`), or the file name. These are still required: check them in your harmonization script.

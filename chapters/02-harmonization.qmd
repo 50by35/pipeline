@@ -57,6 +57,7 @@ These conventions apply to every harmonization, whatever the survey:
 - **`natpovline`** (optional): when the survey provides a national poverty threshold, harmonize it to annual per-capita LCU using the same currency, reference period, and price basis as `welfare` and `welfare_self`. If included, it must have a value in every row (a constant for a single national line, or the applicable regional/urban/rural line for each row). When present, it is used to calculate the 50by35 self-reliance indicator.
 - **`arrival_year`** (optional): the individual's year of arrival in the host country. Leave missing when unavailable; do not infer it from duration-of-displacement unless the source definition supports that conversion.
 - **Sentinel codes** (e.g. `age == 9999`) are converted to system missing.
+- **Clean metadata**: before saving, clear the notes, characteristics and dataset label inherited from the raw data (`notes drop _all`, `char`, `label data ""`; see the end of any example script). `compress` does not do this. The Stata validator warns when they are left in.
 
 
 ::: {.callout-tip}

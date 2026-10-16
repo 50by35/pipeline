@@ -145,6 +145,19 @@ order code year survname hhid pid welfare welfare_type welfare_self weight ///
       camp urban hhsize age male educat4 empstat
 
 isid hhid pid
+* strip notes, characteristics and the dataset label left over from the raw data
+notes drop _all
+local dtachars : char _dta[]
+foreach c of local dtachars {
+    char _dta[`c']
+}
+foreach v of varlist _all {
+    local varchars : char `v'[]
+    foreach c of local varchars {
+        char `v'[`c']
+    }
+}
+label data ""
 compress
 save "`outdir'/ETH_2022_SESRE_V01_M_V01_A_FDP_WELF.dta", replace
 di as result "Saved `outdir'/ETH_2022_SESRE_V01_M_V01_A_FDP_WELF.dta (`=_N' refugees)"
