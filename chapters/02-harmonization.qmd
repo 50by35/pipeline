@@ -7,30 +7,31 @@ date: today
 
 Once raw microdata is available on datalibweb, it is harmonized to the **50by35 schema** (see [Schema & Variable Dictionary](05-schema.qmd)). Harmonization maps survey-specific variables, codes, and units onto the mandatory and optional variables defined by the schema, so that welfare and self-reliance indicators are comparable across surveys, countries, and years.
 
-::: {.callout-note}
-## This chapter is guidance, not a recipe
-How to harmonize a survey depends on the survey: its questionnaire, how refugees are identified, and how welfare is measured all differ. This chapter does **not** give step-by-step instructions for constructing each variable. It gives:
+::: callout-note
+## This chapter is guidance, not specific instructions for harmonization
+
+How to harmonize a survey depends on its questionnaire, how refugees are identified, and how welfare is measured in the survey. This chapter does **not** give granular instructions for constructing each variable. It provides:
 
 - the **guidelines** that every harmonization must follow ([below](#sec-harm-guidelines)), and
 - **example scripts** for 15 surveys to use as a starting point ([below](#sec-harm-examples)).
 
-You write your own survey-specific script, check the result against the schema ([validation](#sec-harm-validate)), and then [upload it](03-harmonized-upload.qmd).
+The harmonizer writes a survey-specific script, checks the result against the schema ([validation](#sec-harm-validate)), and then [uploads it](03-harmonized-upload.qmd).
 :::
 
 ## How to approach a new survey
 
-1. **Read the [schema](05-schema.qmd)** to see which variables are mandatory, which are optional, and what format each must have.
-2. **Define the refugee sample** from the survey's own classification variables, and document it in the script header.
-3. **Pick the closest example script** below (same survey family, same welfare type, or same country) and adapt it.
-4. **Write your own script** that retrieves the raw files from datalibweb, builds the variables, and saves `<survey ID>_WELF.dta`.
-5. **Validate** the file against the schema, fix any errors, and then upload it.
+1.  **Read the [schema](05-schema.qmd)** to see which variables are mandatory, which are optional, and what format each must have.
+2.  **Define the refugee sample** from the survey's own classification variables, and document it in the script header.
+3.  **Refer to the example scripts** below and adapt them where relevant.
+4.  **Write a survey-specific script** that retrieves the raw files from datalibweb, builds the variables, and saves `<survey ID>_WELF.dta`.
+5.  **Validate** the file against the schema, fix any errors, and then upload it.
 
 ## Example harmonization scripts {#sec-harm-examples}
 
-Example harmonization scripts covering 15 country/survey combinations are available in the `Stata/` folder of this repository. They are not intended to be used as-is, but illustrate the harmonization process and provide a starting point for writing survey-specific scripts. "Refugee definition" is abbreviated below — see each script's header comment for the full sample restriction. `welfare_self` formulas omit the floor-at-zero (and, where applicable, cap-at-`welfare`) wrapper for brevity — see the script for the exact expression:
+Example harmonization scripts covering 15 country/survey combinations are available in the `Stata/` folder of this repository. They are not intended to be used as-is, but illustrate the harmonization process and provide a starting point for writing survey-specific scripts. "Refugee definition" is abbreviated below — see each script's header comment for the full sample restriction. `welfare_self` formulas omit the floor-at-zero (and, where applicable, cap-at-`welfare`) wrapper for brevity — see the script for the exact expression. These scripts may differ from the official self-reliance monitoring method, which was yet to be finalized when they were prepared.
 
 | `code` | `year` | `survname` | Welfare | Refugee definition | `welfare_self` | Script |
-|---|---|---|---|---|---|---|
+|-----------|-----------|-----------|-----------|-----------|-----------|-----------|
 | CHL | 2022 | CASEN | Income | Mother's country VEN/COL/HTI (proxy) | `ytotcorh` − `yaimcorh` (HH assistance/subsidy income), then per-adult-equivalent-converted | [do-file](https://github.com/50by35/pipeline/blob/main/Stata/CHL_2022_CASEN_V01_M_V01_A_FDP_WELF.do) |
 | CMR | 2025 | FDS | Consumption | `pops==1` — ⚠️ combined refugee/asylum-seeker code, not separable in source data | `nom_cons_minus_aid` (consumption net of aid, source-provided) | [do-file](https://github.com/50by35/pipeline/blob/main/Stata/CMR_2025_FDS_V01_M_V01_A_FDP_WELF.do) |
 | COL | 2022 | GEIH | Income | `refugee==1`, Venezuelan-born only | `welfare` − `inc_transf_inst` (institutional/gov't transfers) | [do-file](https://github.com/50by35/pipeline/blob/main/Stata/COL_2022_GEIH_V01_M_V01_A_FDP_WELF.do) |
@@ -51,29 +52,29 @@ Example harmonization scripts covering 15 country/survey combinations are availa
 
 These conventions apply to every harmonization, whatever the survey:
 
-- **Sample**: refugees only — the 50by35 monitoring population excludes IDPs and asylum-seekers. Each script's comment header documents the full survey-specific classification (population group codes, nationality, birth country, etc.). One exception: Cameroon FDS 2025 codes refugees and asylum-seekers under a single combined category (`pops==1`) with no variable in any of the raw files to separate them — flagged in that script and pending a fix from the source data provider.
+- **Sample**: refugees only — the 50by35 monitoring population excludes IDPs and asylum-seekers. Each script's comment header should document the full survey-specific classification (population group codes, nationality, birth country, etc.). One exception in the examples: Cameroon FDS 2025 codes refugees and asylum-seekers under a single combined category (`pops==1`) with no variable in any of the raw files to separate them.
 - **`welfare`**: the survey's official welfare aggregate, converted to **annual per capita LCU**.
-- **`welfare_self`**: welfare net of humanitarian/social assistance (per capita, same periodicity and deflation as `welfare`), floored at zero and capped at `welfare`. Where the source provides a net-of-aid aggregate directly (e.g. Uganda's `cons_agg_less_aid`), that is used; otherwise assistance is netted out of the underlying income/consumption components before the same per-capita/deflation/annualization transformation applied to `welfare`. Confirm the final definition with the 50by35 methodology team.
-- **`natpovline`** (optional): when the survey provides a national poverty threshold, harmonize it to annual per-capita LCU using the same currency, reference period, and price basis as `welfare` and `welfare_self`. If included, it must have a value in every row (a constant for a single national line, or the applicable regional/urban/rural line for each row). When present, it is used to calculate the 50by35 self-reliance indicator.
+- **`welfare_self`**: welfare net of humanitarian/social assistance (per capita, same periodicity and deflation as `welfare`), floored at zero and capped at `welfare`. Where the source provides a net-of-aid aggregate directly (e.g. Uganda's `cons_agg_less_aid`), that can be used; otherwise assistance is netted out of the underlying income/consumption components before the same per-capita/deflation/annualization transformation applied to `welfare`. Confirm the final definition with the 50by35 methodology team.
+- **`natpovline`** (optional): when the survey provides a national poverty threshold, convert it to annual per-capita LCU using the same currency, reference period, and price basis as `welfare` and `welfare_self`. If included, it must have a value in every row (a constant for a single national line, or the applicable regional/urban/rural line for each row). When present, it is used to calculate the 50by35 self-reliance indicator.
 - **`arrival_year`** (optional): the individual's year of arrival in the host country. Leave missing when unavailable; do not infer it from duration-of-displacement unless the source definition supports that conversion.
+- **`camp_pcode`, `camp_name`, `camp_lat`, `camp_lon`** (optional): the camp where the person lives, taken from the UNHCR Population of Concern layer (refugee formal and informal settlements), for people with `camp == 1`. Copy the pcode and coordinates of one layer record so the camp can be looked up in the layer; `camp_name` can be the layer's `gis_name` or the name in the source data. Leave them empty or missing for non-camp residents, and leave the pcode and coordinates empty for camps not identified in the layer. See [Camp location variables](05-schema.qmd#sec-schema-camp).
 - **Sentinel codes** (e.g. `age == 9999`) are converted to system missing.
 - **Clean metadata**: before saving, clear the notes, characteristics and dataset label inherited from the raw data (`notes drop _all`, `char`, `label data ""`; see the end of any example script). `compress` does not do this. The Stata validator warns when they are left in.
 
-
-::: {.callout-tip}
+::: callout-tip
 ## Datalibweb access
-The sample Stata harmonization scripts in this repository retrieve their raw inputs directly from the datalibweb **`FDPRAW`** collection. Before running a script, confirm that you have access to the collection, a working datalibweb Stata package, and your datalibweb token saved in the package (`datalibweb, token(...)`, see [Access Data](04-access.qmd#sec-access-token)). Each script also has a `local outdir` line near the top: edit it to the folder where the harmonized `_WELF.dta` should be saved.
+
+The sample Stata harmonization scripts in this repository retrieve their raw inputs directly from the datalibweb **`FDPRAW`** collection. Before running a script, confirm that the harmonizer has access to the collection, a working datalibweb Stata or R package, and the datalibweb token saved in the package (`datalibweb, token(...)`, see [Access Data](04-access.qmd#sec-access-token)). Each script also has a `local outdir` line near the top: edit it to the folder where the harmonized `_WELF.dta` should be saved.
 :::
 
-## Check your file against the schema {#sec-harm-validate}
+## Check the file against the schema {#sec-harm-validate}
 
 After harmonizing, check the file against the schema before upload. The upload scripts run the same check, so any problem is caught either way. Run these from the repository's main folder, since they load `R/validate_50by35.R` or `Stata/validate_50by35.do` by relative path:
 
 ::: {.panel-tabset group="language"}
-
 ## R
 
-```r
+``` r
 library(haven)
 source("R/validate_50by35.R")
 
@@ -83,9 +84,8 @@ validate_50by35(df)
 
 ## Stata
 
-```stata
+``` stata
 use "<staging folder>/<SurveyID>_WELF.dta", clear
 do "Stata/validate_50by35.do"
 ```
-
 :::

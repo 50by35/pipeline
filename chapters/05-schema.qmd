@@ -3,10 +3,10 @@ title: "Schema & Variable Dictionary"
 date: today
 ---
 
-::: {.callout-important}
+::: callout-important
 ## Status
-This variable dictionary is a working draft. Confirm the final variable
-list, value-label codes, and the precise definition of `welfare_self` with the 50by35 methodology team before treating it as authoritative.
+
+This variable dictionary is a working draft. Confirm the final variable list, value-label codes, and the precise definition of `welfare_self` with the 50by35 methodology team before treating it as authoritative.
 :::
 
 ## Overview
@@ -24,58 +24,57 @@ The **unit of observation** is the individual: one row per person, with househol
 
 ## Conventions
 
-- **Type** refers to the recommended Stata storage type of the variable in the
-  harmonized `.dta` file: `str#` (string), `byte`/`int`/`long` (integers),
-  `double` (reals). Integer types are interchangeable: running `compress`
-  before saving may store an integer variable in a smaller type, which is
-  accepted. Real-valued variables (`welfare`, `welfare_self`, `weight`, `age`,
-  `natpovline`) must not be stored as `float`, which keeps only about 7
-  significant digits; `compress` never converts `double` to `float`, but may
-  store integer-valued reals as `byte`/`int`/`long`, which is accepted.
-  Storage types are checked only by the Stata validator, because
-  [`haven`](https://haven.tidyverse.org) reads every Stata numeric into R as
-  `double`; the R validator checks values only.
-- **Missing** — mandatory variables may not be missing except where noted. Use
-  Stata's system missing (`.`) for genuinely unknown values; do not use numeric
-  sentinels such as `-9` or `99`, or extended missing values (`.a`–`.z`).
-- **Labels** — categorical variables must carry Stata value labels; the numeric
-  codes below are authoritative and must match across all surveys. Every
-  variable should carry the text in the **Label** column as its Stata variable
-  label (`label variable`), with units in brackets where applicable; the
-  validators warn when a label differs.
+- **Type** refers to the recommended Stata storage type of the variable in the harmonized `.dta` file: `str#` (string), `byte`/`int`/`long` (integers), `double` (reals). Integer types are interchangeable: running `compress` before saving may store an integer variable in a smaller type, which is accepted. Real-valued variables (`welfare`, `welfare_self`, `weight`, `age`, `natpovline`) should be stored as `double` to maintain precision.
+- **Missing** — mandatory variables may not be missing except where noted. Use Stata's system missing (`.`) for genuinely unknown values; do not use numeric sentinels such as `-9` or `99`, or extended missing values (`.a`–`.z`).
+- **Labels** — categorical variables must carry Stata value labels; the numeric codes below are authoritative and must match across all surveys. Every variable should carry the text in the **Label** column as its Stata variable label (`label variable`), with units in brackets where applicable; the validators warn when a label differs.
 - **Identifiers** are strings to preserve leading zeros and avoid precision loss.
 
 ## Mandatory Variables
 
 | Variable | Label | Type | Unit / range | Missing | Notes |
-|---|---|---|---|---|---|
+|------------|------------|------------|------------|------------|------------|
 | `code` | Country code | `str3` | ISO / WDI 3-letter, uppercase | Not allowed | e.g. `AGO`, `ETH` |
 | `year` | Survey year | `int` | 1990–2035 | Not allowed | Four-digit year of data collection |
 | `survname` | Survey name | `str#` | — | Not allowed | Survey acronym (e.g. `GEIH`, `EHCVM`, `RHS`) |
 | `hhid` | Household identifier | `str` | — | Not allowed | Unique per household within the survey; string to preserve leading zeros |
 | `pid` | Person identifier | `str` | — | Not allowed | `hhid` and `pid` together must uniquely identify each row |
-| `welfare` | Welfare aggregate (LCU, annual per capita) | `double` | > 0, LCU, annual per capita | Not allowed | Consumption or income aggregate from the survey's official poverty methodology  | 
+| `welfare` | Welfare aggregate (LCU, annual per capita) | `double` | \> 0, LCU, annual per capita | Not allowed | Consumption or income aggregate from the survey's official poverty methodology |
 | `welfare_self` | Self-reliance-adjusted welfare (LCU, annual per capita) | `double` | ≥ 0, LCU, annual per capita | Not allowed | Welfare net of humanitarian/social assistance, in the same units as `welfare`; must not exceed `welfare` in any row. Used for the 50by35 self-reliance indicator (see [Harmonize Data](02-harmonization.qmd)) |
 | `welfare_type` | Welfare measure type | `byte` | `1`–`3` | Not allowed | `1` = Consumption, `2` = Income, `3` = Expenditure |
-| `weight` | Sampling weight | `double` | > 0 | Not allowed | Individual sampling/population weight |
+| `weight` | Sampling weight | `double` | \> 0 | Not allowed | Individual sampling/population weight |
 | `camp` | Camp/non-camp | `byte` | `0`/`1` | Allowed | `0` = Non-camp, `1` = Camp. The variable must exist, but may be missing in every row if the survey does not identify camp residence; it still needs the value label. Used for the camp breakdown of the indicators |
 | `urban` | Urban/rural | `byte` | `0`/`1` | Allowed | `0` = Rural, `1` = Urban. The variable must exist, but may be missing in every row if the survey has no urban/rural split; it still needs the value label |
 
 ## Optional Variables
 
-Optional variables may be left out of the file entirely. When included, individual rows may be missing (`.`) except for `natpovline`, which must have a value in every row.
+Optional variables may be left out of the file entirely. When included, individual rows may be missing (`.` for numeric variables, the empty string for strings) except for `natpovline`, which must have a value in every row.
 
 | Variable | Label | Type | Unit / range | Notes |
-|---|---|---|---|---|
+|---------------|---------------|---------------|---------------|---------------|
+| `natpovline` | National poverty line (LCU, annual per capita) | `double` | \> 0, LCU, annual per capita | Express in the same currency, reference period, and price basis as `welfare` and `welfare_self`. If included, it must be non-missing in every row. When present, it is the line for the **primary** 50by35 self-reliance indicator |
 | `hhsize` | Household size | `int` | ≥ 1 | Number of household members |
 | `age` | Age (years) | `double` | 0–120 years | Decimal allowed for children under 5 (per GMD 2.0); integer otherwise |
 | `male` | Sex | `byte` | `0`/`1` | `0` = Female, `1` = Male |
 | `educat4` | Highest education (4 cat.) | `byte` | `1`–`4` | See value labels below |
 | `empstat` | Employment status | `byte` | `1`–`4` | See value labels below |
+| `arrival_year` | Year of arrival | `int` | 1900–survey year | Year the individual arrived in the host country |
+| `camp_pcode` | UNHCR camp location code (pcode) | `str#` | `pcode` of the UNHCR PoC layer, 10 characters | ISO3 + `s` + 6 digits, e.g. `UGAs002611`. Empty string if unknown. See [Camp location variables](#sec-schema-camp) |
+| `camp_name` | Camp name | `str#` | — | Name from the source data or the PoC layer (`gis_name`); not required to match the layer. Empty string if unknown. See [Camp location variables](#sec-schema-camp) |
+| `camp_lat` | Camp latitude (decimal degrees) | `double` | -90 to 90, WGS84 | `latitude_D` of the UNHCR PoC layer. See [Camp location variables](#sec-schema-camp) |
+| `camp_lon` | Camp longitude (decimal degrees) | `double` | -180 to 180, WGS84 | `longitude_D` of the UNHCR PoC layer. See [Camp location variables](#sec-schema-camp) |
 | `strata` | Sampling strata | `int` | — | Design variable for variance estimation |
 | `psu` | Primary sampling unit | `long` | — | Design variable for variance estimation |
-| `natpovline` | National poverty line (LCU, annual per capita) | `double` | > 0, LCU, annual per capita | Express in the same currency, reference period, and price basis as `welfare` and `welfare_self`. If included, it must be non-missing in every row. When present, it is the line for the **primary** 50by35 self-reliance indicator |
-| `arrival_year` | Year of arrival | `int` | 1900–survey year | Year the individual arrived in the host country |
+
+### Camp location variables {#sec-schema-camp}
+
+`camp_pcode`, `camp_name`, `camp_lat` and `camp_lon` identify and locate the camp where the person lives. Each is optional. `camp_pcode`, `camp_lat` and `camp_lon` must be taken from, and stay aligned with, the UNHCR Population of Concern (PoC) layer, so that any record can be looked up in it. `camp_name` can come from the source data or from the layer:
+
+- **Layer**: [`wrl_prp_p_unhcr_PoC`](https://gis.unhcr.org/arcgis/rest/services/core_v2/wrl_prp_p_unhcr_PoC/FeatureServer/0) (UNHCR GIS).
+- **Download**: `R/get_poc_camps.R` and `Stata/get_poc_camps.do` download the in-scope camps from the layer (no token needed) into a table with `camp_pcode`, `camp_name`, `camp_lat` and `camp_lon`, to look up or join by pcode. The Stata script uses Stata's Python integration, so Stata needs a working Python (see `python query`).
+- **Scope**: refugee formal and informal settlements only, i.e. layer records with `pop_type` = 52 (Refugee) and `loc_subtype` = 38 (Formal Settlement) or 39 (Informal Settlement). Other site types are out of scope for now.
+- **Mapping**: `camp_pcode` = `pcode`, `camp_lat` = `latitude_D`, `camp_lon` = `longitude_D`. Copy the values of one layer record; do not retype or edit them. `camp_name` is the layer's `gis_name` or the name in the source data. It is the human-readable label, and `camp_pcode` is the key.
+- **Camp residents only**: the variables are empty or missing where `camp` is `0`. Leave `camp_pcode`, `camp_lat` and `camp_lon` empty where the camp is not in the layer; `camp_name` may still be filled from the source.
+- **Camp location, never household location**: the coordinates are those of the camp in the layer, the same for everyone in the camp. Do not store household or dwelling GPS coordinates.
 
 ## Value Labels
 
@@ -83,44 +82,48 @@ Categorical variables must use these codes and labels exactly.
 
 `welfare_type`
 
-: `1` Consumption · `2` Income · `3` Expenditure
+:   `1` Consumption · `2` Income · `3` Expenditure
 
 `male`
 
-: `0` Female · `1` Male
+:   `0` Female · `1` Male
 
 `camp`
 
-: `0` Non-camp · `1` Camp
+:   `0` Non-camp · `1` Camp
 
 `urban`
 
-: `0` Rural · `1` Urban
+:   `0` Rural · `1` Urban
 
 `educat4`
 
-: `1` No education · `2` Primary · `3` Secondary · `4` Tertiary
+:   `1` No education · `2` Primary · `3` Secondary · `4` Tertiary
 
 `empstat`
 
-: `1` Employed · `2` Unemployed · `3` Out of labor force · `4` Not applicable
+:   `1` Employed · `2` Unemployed · `3` Out of labor force · `4` Not applicable
 
 ## Validation
 
 The validation scripts (`Stata/validate_50by35.do`, `R/validate_50by35.R`) run before every harmonized upload. An **error** stops the upload; a **warning** is printed and the upload continues.
 
 | Result | What is checked |
-|---|---|
+|------------------------------------|------------------------------------|
 | **Error** | All mandatory variables are present, with no missing values except `camp` and `urban`. |
 | **Error** | `code` is a 3-letter uppercase string; `survname`, `hhid` and `pid` are non-empty strings; `hhid` + `pid` is unique. |
 | **Error** | One survey per file: `code`, `year` and `survname` are constant across all rows. |
 | **Error** | No extended missing values (`.a`–`.z`) in any numeric variable; use system missing (`.`). |
-| **Error** | Ranges:`year` is an integer in 1990–2035; `welfare` and `weight` are > 0; `welfare_self` is ≥ 0 and ≤ `welfare`; `welfare_type` is 1–3; `camp` and `urban` are 0, 1 or missing. |
+| **Error** | Ranges:`year` is an integer in 1990–2035; `welfare` and `weight` are \> 0; `welfare_self` is ≥ 0 and ≤ `welfare`; `welfare_type` is 1–3; `camp` and `urban` are 0, 1 or missing. |
 | **Error** | Categorical variables (`welfare_type`, `camp`, `urban`, and `male`, `educat4`, `empstat` when present) carry value labels with exactly the codes and text shown above: no extra and no missing codes. |
-| **Error** | Optional variables, when present, are in range: `hhsize` is an integer ≥ 1; `age` is 0–120 and an integer from age 5; `male` is 0/1; `educat4` and `empstat` are 1–4; `strata` and `psu` are integers; `arrival_year` is an integer from 1900 to the survey year; `natpovline` is > 0 and non-missing in every row. |
-| **Error** (Stata only) | Storage types: integer variables use `byte`/`int`/`long`, and real variables are not `float`. |
+| **Error** | Optional variables, when present, are in range: `hhsize` is an integer ≥ 1; `age` is 0–120 and an integer from age 5; `male` is 0/1; `educat4` and `empstat` are 1–4; `strata` and `psu` are integers; `arrival_year` is an integer from 1900 to the survey year; `natpovline` is \> 0 and non-missing in every row. |
+| **Error** | Camp location variables, when present: `camp_pcode` and `camp_name` are strings; `camp_pcode`, when not empty, is ISO3 + `s` + 6 digits (e.g. `UGAs002611`); `camp_lat` is in -90 to 90 and `camp_lon` in -180 to 180; `camp_lat` and `camp_lon` are both present or both missing in each row; all four are empty or missing where `camp` is `0`. |
+| **Error** (Stata only) | Storage types: integer variables use `byte`/`int`/`long`, and real variables (including `camp_lat` and `camp_lon`) are not `float`. |
 | **Warning** | `hhsize` differs from the number of `pid` records in the household. Rosters can be incomplete, and refugee-only samples keep a subset of household members. |
+| **Warning** | Camp location variables: one `camp_pcode` has more than one `camp_name`, `camp_lat` or `camp_lon`; a camp variable is filled where `camp` is missing; or `camp_lat` and `camp_lon` are both exactly 0. |
 | **Warning** | A variable label differs from the **Label** column above. |
 | **Warning** (Stata only) | The file has notes, characteristics or a dataset label left over from the raw data. Clear them before saving. R cannot see them. |
 
-The validators do **not** check for numeric sentinel codes (e.g. `-9`, `99`) in variables without a range check (such as `strata` and `psu`), or the file name. These are still required: check them in your harmonization script.
+The validators do **not** look `camp_pcode` up in the UNHCR PoC layer (they run offline): they check only its format. Checking that the camp values match the layer is the responsibility of the harmonizer.
+
+The validators do **not** check for numeric sentinel codes (e.g. `-9`, `99`) in variables without a range check (such as `strata` and `psu`), or the file name. These are still required: check them in the harmonization script.

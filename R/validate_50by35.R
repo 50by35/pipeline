@@ -111,6 +111,42 @@ validate_50by35 <- function(df) {
             df$arrival_year != floor(df$arrival_year), na.rm = TRUE))
     fail("arrival_year must be an integer year from 1900 through survey year")
 
+  # camp location, aligned with the UNHCR PoC layer (strings are empty when
+  # unknown). The pcode is checked for format only: no lookup in the layer.
+  camp_vars <- intersect(c("camp_pcode", "camp_name", "camp_lat", "camp_lon"), names(df))
+  filled <- function(x) if (is.character(x)) !is.na(x) & x != "" else !is.na(x)
+  for (v in intersect(c("camp_pcode", "camp_name"), camp_vars))
+    if (!is.character(df[[v]])) fail(v, " must be a string")
+  for (v in intersect(c("camp_lat", "camp_lon"), camp_vars))
+    if (!is.numeric(df[[v]])) fail(v, " must be numeric")
+  if ("camp_pcode" %in% camp_vars &&
+      any(!grepl("^[A-Z]{3}s[0-9]{6}$", df$camp_pcode[filled(df$camp_pcode)])))
+    fail("camp_pcode must be ISO3 + 's' + 6 digits (e.g. UGAs002611)")
+  if ("camp_lat" %in% camp_vars && any(abs(df$camp_lat) > 90, na.rm = TRUE))
+    fail("camp_lat must be between -90 and 90")
+  if ("camp_lon" %in% camp_vars && any(abs(df$camp_lon) > 180, na.rm = TRUE))
+    fail("camp_lon must be between -180 and 180")
+  if (all(c("camp_lat", "camp_lon") %in% camp_vars) &&
+      any(is.na(df$camp_lat) != is.na(df$camp_lon)))
+    fail("camp_lat and camp_lon must be both present or both missing in each row")
+  for (v in camp_vars)
+    if (any(filled(df[[v]]) & df$camp %in% 0))
+      fail(v, " must be empty or missing where camp is 0")
+  for (v in camp_vars)
+    if (any(filled(df[[v]]) & is.na(df$camp)))
+      message("SCHEMA WARNING: ", v, " is filled where camp is missing")
+  if ("camp_pcode" %in% camp_vars)
+    for (v in setdiff(camp_vars, "camp_pcode")) {
+      k <- filled(df$camp_pcode) & filled(df[[v]])
+      n_vals <- tapply(df[[v]][k], df$camp_pcode[k], function(x) length(unique(x)))
+      if (any(n_vals > 1))
+        message("SCHEMA WARNING: ", v, " takes more than one value within ",
+                sum(n_vals > 1), " camp_pcode(s)")
+    }
+  if (all(c("camp_lat", "camp_lon") %in% camp_vars) &&
+      any(df$camp_lat == 0 & df$camp_lon == 0, na.rm = TRUE))
+    message("SCHEMA WARNING: camp_lat and camp_lon are both 0 in some rows")
+
   # variable labels (warning only): expected text is the Label column of
   # chapters/05-schema.qmd. Labels document the file and do not affect the
   # indicators, so a mismatch is a warning, not an error.
@@ -134,7 +170,11 @@ validate_50by35 <- function(df) {
     strata       = "Sampling strata",
     psu          = "Primary sampling unit",
     natpovline   = "National poverty line (LCU, annual per capita)",
-    arrival_year = "Year of arrival"
+    arrival_year = "Year of arrival",
+    camp_pcode   = "UNHCR camp location code (pcode)",
+    camp_name    = "Camp name",
+    camp_lat     = "Camp latitude (decimal degrees)",
+    camp_lon     = "Camp longitude (decimal degrees)"
   )
   for (v in intersect(names(expected_var_labels), names(df))) {
     actual <- attr(df[[v]], "label")
