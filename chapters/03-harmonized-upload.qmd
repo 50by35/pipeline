@@ -6,9 +6,115 @@ date: today
 ## Overview
 Harmonized microdata and harmonization scripts are uploaded to **datalibweb** via **PRIMUS**. After review, approved files are published to datalibweb for 50by35 monitoring.
 
-## Uploading via PRIMUS
+## Steps at a glance
 
-Harmonized files are uploaded as a PRIMUS **transaction** using the `FDP-harmonized-data` process (`processid = 40`) by users with uploader status. 
+Choose R or Stata, whichever you prefer. The steps are the same.
+
+1. **Set up once.** Install the PRIMUS client and save your datalibweb token ([Step 1](#sec-harm-setup)).
+2. **Prepare your files.** Name your harmonized `.dta` file and harmonization script after the survey ID ([Step 2](#sec-harm-prepare)).
+3. **Run the upload script.** Edit a few lines at the top of `R/03_upload_harmonized.R` or `Stata/03_upload_harmonized.do` and run it ([Step 3](#sec-harm-run)). The script checks your file, calculates the self-reliance numbers, uploads everything and confirms the upload.
+4. **Check the result.** Look for the transaction ID and the indicator values in the output ([Step 4](#sec-harm-check)).
+5. **Wait for approval.** Regional and global approvers review the upload ([Reviewing & approving](#reviewing-approving-via-primus)).
+
+## Step by step
+
+### Step 1. Set up once {#sec-harm-setup}
+
+1. Install the PRIMUS client and save your datalibweb token, as described in [Upload Raw Data, Step 1](01-raw-upload.qmd#sec-raw-setup).
+2. The harmonized upload also reads CPI and PPP values from datalibweb, so the **datalibweb** client needs the same token:
+
+::: {.panel-tabset group="language"}
+
+## R
+
+```r
+dlw_set_token("<your datalibweb token>")   # stored in the system keychain
+```
+
+## Stata
+
+```stata
+datalibweb, token(<your datalibweb token>)
+```
+
+:::
+
+3. Download this repository to your computer and **run the scripts from its main folder**: in R, open the folder as your project or use `setwd()`; in Stata, use `cd`. The scripts load helper files from the repository by relative path: `R/utils.R` and `R/validate_50by35.R` in R, `Stata/utils.do` and `Stata/validate_50by35.do` in Stata. If you copy a script elsewhere, copy these files with it and keep the `R/` and `Stata/` folder names (or edit the paths in the script).
+
+### Step 2. Prepare your files {#sec-harm-prepare}
+
+You need:
+
+- **A survey ID** in the form `CCC_YYYY_SSSS_V01_M_V01_A_FDP`: the raw survey ID, then the harmonization version and `FDP` (for example `COL_2023_GEIH_V01_M_V01_A_FDP`).
+- **The harmonized file**, named `<survey ID>_WELF.dta`, which follows the [schema](05-schema.qmd). Save it in a folder of its own.
+- **Your harmonization script**, named `<survey ID>_WELF.do` (or `.R` / `.py`) and saved in the `Stata/` folder of the repository. It is uploaded with the data so the harmonization can be reproduced.
+- **The folder with the harmonized files.** In Stata, edit the `local outdir` line at the top of the script. In R, set the `FIFTYBY35_PROCESSED` environment variable (on Windows, use Start menu search for **Edit environment variables for your account**, add a user variable with that name, then restart R) or edit the default folder on the `outdir` line of the script.
+
+The script rejects files that do not follow the [schema](05-schema.qmd). Run the validation on its own first if you want to fix problems before uploading (see [Harmonization](02-harmonization.qmd)).
+
+### Step 3. Run the upload script {#sec-harm-run}
+
+1. Open `R/03_upload_harmonized.R` or `Stata/03_upload_harmonized.do`.
+2. In the parameters block, set the **survey ID** and the path to the **harmonization script**. Each script has ready-made example blocks to copy. Leave the `cpi_override` and `ppp_override` settings as they are.
+3. Run the whole script.
+
+::: {.panel-tabset group="language"}
+
+## R
+
+```r
+source("R/03_upload_harmonized.R")
+```
+
+## Stata
+
+```stata
+do "Stata/03_upload_harmonized.do"
+```
+
+:::
+
+The script then, in this order:
+
+1. **Checks your file** against the schema. If there is a problem, it stops and names it. Nothing is uploaded until the file passes.
+2. **Looks up the CPI and PPP values** it needs from datalibweb.
+3. **Calculates the 50by35 indicators**: the self-reliance rate and poverty rate, for the whole sample and by camp status, using your national poverty line (`natpovline`) if the file has one and the $3.00/day international line.
+4. **Uploads** a small indicator (`.xml`) file that opens the transaction, then your data and your harmonization script.
+5. **Confirms** the upload so approvers can see it.
+
+To upload many surveys in one run, use `R/03_upload_harmonized_batch.R` or `Stata/03_upload_harmonized_batch.do`. They process every harmonized file in the folder and print a summary at the end.
+
+::: {.callout-tip}
+## Practice first (draft only)
+To try the upload without sending it to approvers, delete the last step before running: the `primus_confirm(...)` line in R, or the `primus action ... decision(confirm)` command in Stata. The transaction then stays a private **draft** that approvers cannot see. You can view and delete it in the [PRIMUS web interface](https://primusuiprod.ase.worldbank.org); the R and Stata packages cannot delete a draft.
+:::
+
+### Step 4. Check the result {#sec-harm-check}
+
+In the output, look for:
+
+- the validation result (`50by35 schema validation PASSED`, plus any `SCHEMA WARNING` lines, which do not stop the upload);
+- the CPI and PPP values used (`CPI(...) = ...   PPP2021(...) = ...`);
+- the self-reliance shares for the national line and for the $3.00/day line;
+- `Opened transaction ...` with the transaction ID, and at the end `Harmonized upload confirmed`.
+
+In the PRIMUS web interface, the transaction shows the indicator values in the **Data Summary** and **Calculation Details** tables. Check them before the upload goes to review.
+
+### If something goes wrong
+
+| What you see | What it means | What to do |
+|---|---|---|
+| Validation error | Your file does not follow the schema | Fix the problem named in the message and run again. See [Schema](05-schema.qmd) |
+| Token or login error | Your datalibweb token has expired | Get a new token and repeat Step 1 |
+| `no national value` for CPI or PPP | The datalibweb support files have no value for your country or year | Set `cpi_override` and `ppp_override` in the script, or ask the 50by35 team for the right values. See [CPI and PPP](#sec-cpi-ppp) |
+| `filename must have the format SurveyID_Module` | The file name does not match the survey ID | Name the files `<survey ID>_WELF.dta` and `<survey ID>_WELF.do` |
+| Survey ID not accepted, or an open transaction already exists | A survey can have only one open transaction, and a new version (`V02`) needs `V01` approved first | Ask the approver to approve or reject the earlier one, or delete your draft in the web interface |
+
+## How it works {#sec-harm-how}
+
+This section is for reference. It explains what the upload script does, so you can check or adapt it.
+
+Harmonized files are uploaded as a PRIMUS **transaction** using the `FDP-harmonized-data` process (`processid = 40`) by users with uploader status.
 
 ### Validation checks
 All harmonized files must pass validation checks before they can be uploaded to datalibweb. These confirm that the harmonized file conforms to the schema, and that mandatory variables are present and non-missing. Any deviation from the schema will trigger an error and prevent the harmonized file from being uploaded to datalibweb. They check for missing values in mandatory variables, for negative or zero values in `welfare` and `weight`, and that `welfare_self` is not greater than `welfare`. The optional `natpovline` may be omitted, but if it is included every row must have a positive value. Households where `hhsize` differs from the number of `pid` records are flagged with a warning (rosters can be incomplete, and refugee-only samples keep a subset of household members). The validation scripts are `Stata/validate_50by35.do` and `R/validate_50by35.R` in this repository.

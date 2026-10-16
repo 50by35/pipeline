@@ -5,7 +5,7 @@ date: today
 
 ## Overview
 
-Approved files are distributed through **datalibweb**, in two collections:
+Approved files are available from the `FDP` server on **datalibweb**, in two collections:
 
 | Collection | Content |
 |---|---|
@@ -14,10 +14,170 @@ Approved files are distributed through **datalibweb**, in two collections:
 
 The harmonized welfare module in the `FDP` collection is called **`WELF`**.
 
-## Who can access data
-To access the data, users must be registered on datalibweb and have permission to access the `FDPRAW` and `FDP` collections. Access is set to private by default on datalibweb. Each user needs to subscribe to access the datasets they need and be approved by admin. Admin can change access to public, so that all (internal) datalibweb users can access it without user level subscription. 
+## Steps at a glance
 
-## File naming conventions
+Choose R or Stata, whichever you prefer. The steps are the same.
+
+1. **Get access.** Register on datalibweb and subscribe to the collections you need ([Step 1](#sec-access-permission)).
+2. **Save your token once.** Install the client and save your datalibweb token ([Step 2](#sec-access-token)).
+3. **Find your survey.** Check what is available for your country ([Step 3](#sec-access-find)).
+4. **Load the data.** Download the harmonized file into R or Stata ([Step 4](#sec-access-load)).
+5. **Calculate the self-reliance rate** (optional) ([Step 5](#sec-access-sr)).
+
+## Step by step
+
+### Step 1. Get access {#sec-access-permission}
+
+Register on datalibweb and request access to the `FDPRAW` and `FDP` collections. Access is private by default: each user subscribes to the datasets they need and is approved by an admin. An admin can also make a collection public, so that all (internal) datalibweb users can use it without subscribing.
+
+Both clients need the World Bank intranet or VPN.
+
+### Step 2. Save your token once {#sec-access-token}
+
+Two clients are available: the [`datalibweb` Stata package](https://github.com/worldbank/datalibweb) and the [`dlw` R package](https://github.com/worldbank/dlw). Install the one you use, then save your datalibweb token. It is the same token PRIMUS uses. It is valid for 30 days and renewed on the [datalibweb website](https://datalibweb2.worldbank.org). Do not commit tokens or put them in scripts.
+
+::: {.panel-tabset group="language"}
+
+## R
+
+```r
+dlw_set_token("<your datalibweb token>")   # one-time setup; stored in the system keychain
+```
+
+R reuses the saved token. Run `dlw_set_token()` again only after renewal.
+
+## Stata
+
+```stata
+datalibweb, token(<your datalibweb token>) version(2)
+* one-time setup; do not hard-code it in a do-file.
+```
+
+:::
+
+### Step 3. Find your survey {#sec-access-find}
+
+::: {.panel-tabset group="language"}
+
+## R
+
+```r
+library(dlw)
+
+# all collections (servers) you can access
+dlw_server_catalog()
+
+# what is in a collection; in R the FDP server holds both the harmonized
+# files and the raw files they were built from
+dlw_server_catalog("FDP")
+
+# everything available for one country, across collections
+dlw_country_catalog("TCD")
+
+# files for one country within a collection
+dlw_server_inventory("TCD", server = "FDP")
+```
+
+## Stata
+
+```stata
+* interactive browser: click through region -> country -> collection
+datalibweb
+
+```
+
+:::
+
+### Step 4. Load the data {#sec-access-load}
+
+::: {.panel-tabset group="language"}
+
+## R
+
+```r
+library(dlw)
+
+# harmonized 50by35 welfare module (WELF) from the FDP collection
+welf <- dlw_get_data(
+  country_code = "TCD",
+  filename     = "TCD_2022_EHCVM_V01_M_V01_A_FDP_WELF.dta",
+  server       = "FDP",
+  year         = 2022
+)
+
+# a raw file from the FDPRAW collection; year and survey (acronym) disambiguate
+# the specific survey vintage, the R equivalent of Stata's surveyid()
+raw <- dlw_get_data(
+  country_code = "TCD",
+  year         = 2022,
+  survey       = "EHCVM",
+  filename     = "individual_TCD_2022.dta",
+  server       = "FDP"
+)
+```
+
+## Stata
+
+```stata
+* harmonized 50by35 welfare module (WELF) from the FDP collection;
+* the latest master and harmonization versions are loaded by default
+datalibweb, country(TCD) years(2022) type(FDP) mod(WELF) clear
+
+* pin specific vintages for replicability
+dlw, country(TCD) years(2022) type(FDP) mod(WELF) verm(01) vera(01) survey(EHCVM) clear
+
+* a raw file from the FDPRAW collection
+datalibweb, country(TCD) years(2022) type(FDPRAW) ///
+    surveyid(TCD_2022_EHCVM_V01_M) filename(individual_TCD_2022.dta) clear
+```
+
+:::
+
+Versions are **never replaced**: a new release gets a new version number and earlier vintages stay available. Record the full survey ID you used in your analysis (see [File naming conventions](#sec-access-naming)).
+
+### Step 5. Calculate the self-reliance rate {#sec-access-sr}
+
+The self-reliance rate is the weighted share of people whose `welfare_self` reaches the poverty line. When the file has a national poverty line (`natpovline`) and no currency conversion is needed.
+
+::: {.panel-tabset group="language"}
+
+## R
+
+```r
+# weighted share with welfare_self at or above the national line
+if ("natpovline" %in% names(welf)) {
+  weighted.mean(welf$welfare_self >= welf$natpovline, welf$weight)
+}
+```
+
+## Stata
+
+```stata
+* weighted share with welfare_self at or above the national line
+capture confirm variable natpovline
+if !_rc {
+    gen byte _sr = welfare_self >= natpovline
+    sum _sr [aw=weight]
+}
+```
+
+:::
+
+`natpovline` is optional and some files do not have it (nothing is calculated then). For the $3.00/day international line, the poverty rate, and the camp / non-camp results, see [Full indicator calculation](#sec-access-full).
+
+### If something goes wrong
+
+| What you see | What it means | What to do |
+|---|---|---|
+| Access denied, or the collection is not listed | You are not subscribed to the collection | Request access in Step 1 |
+| Token or login error | Your datalibweb token has expired | Get a new token and repeat Step 2 |
+| Cannot connect | You are off the World Bank network | Connect to the intranet or VPN |
+| No survey found | The survey is not approved yet, or the country or year is wrong | Check [Step 3](#sec-access-find), and ask the uploader whether it is approved |
+| `natpovline` not found | The survey has no national poverty line | Use the international line instead (see below) |
+
+## Reference
+
+### File naming conventions {#sec-access-naming}
 
 datalibweb survey identifiers guarantee replicability: versions are **never replaced** — new releases get a new version number, and previous vintages remain available. Always record the full survey ID used in an analysis.
 
@@ -41,40 +201,25 @@ CCC_YYYY_SSSS_V##_M_V##_A_FDP
 - `V##_A` — version of the harmonization (**adaptation**), independent of the master version
 - `FDP` — the collection of harmonized surveys
 
-**Module files** append the module name to the survey ID. The 50by35 harmonized welfare file (V01) for Colombia is:
+**Module files** append the module name to the survey ID. The 50by35 harmonized welfare file (V01) for Chad is:
 
 ```
-COL_2023_GEIH_V01_M_V01_A_FDP_WELF.dta
+TCD_2022_EHCVM_V01_M_V01_A_FDP_WELF.dta
 ```
 
-## Using datalibweb
-Two clients are available: the [`datalibweb` Stata package](https://github.com/worldbank/datalibweb) and the [`dlw` R package](https://github.com/worldbank/dlw). Both require the World Bank intranet/VPN, permission to access the collections, and the same datalibweb token used by PRIMUS (valid 30 days, renewed on the datalibweb website).
+### Full indicator calculation {#sec-access-full}
 
-### Authentication
+This example loads a harmonized file and calculates the self-reliance rate and poverty rate, in percent, on the national line (primary, if `natpovline` is in the file) and the $3.00/day 2021 PPP line, for the whole sample and by camp status. Each estimate comes with a **standard error and 95% confidence interval**. It uses the same CPI and PPP helpers, and therefore the same values, as the [indicator XML](03-harmonized-upload.qmd#sec-cpi-ppp) in the harmonized upload. Unlike the steps above, it needs a copy of this repository: it loads `R/utils.R` (R) or `Stata/utils.do` (Stata) by relative path, so run it from the repository's main folder, or copy that one file next to your script and edit the path.
 
-Tokens are valid for 30 days. Renew them on the [datalibweb website](https://datalibweb2.worldbank.org). Do not commit tokens or put them in scripts.
+The standard errors account for the survey design:
 
-::: {.panel-tabset group="language"}
+- **Clusters** are the primary sampling units (`psu`) when the file has them, with no missing values. Otherwise they are households (`hhid`), because members of a household share one `welfare` value and cannot be treated as independent observations. Ignoring this makes the standard errors far too small.
+- **Strata** (`strata`) are used when the file has them, with no missing values.
+- **Subgroups** such as camp are estimated as subpopulations of the full design, never by dropping the other rows first, which would give wrong standard errors.
+- **Confidence intervals** use a t distribution with the design's degrees of freedom (number of clusters minus number of strata).
+- A subgroup whose rows fall in a single cluster has no estimable standard error. R reports `NA`; Stata reports a standard error of about zero, which should be ignored.
 
-## R
-
-```r
-dlw_set_token("<your datalibweb token>")   # one-time setup; stored in the system keychain
-```
-
-R reuses the saved token; run `dlw_set_token()` again only after renewal.
-
-## Stata
-
-```stata
-datalibweb, token(<your datalibweb token>) version(2)
-* one-time setup; do not hard-code it in a do-file.
-```
-
-:::
-
-
-## Checking the catalog
+The R example needs the [`survey`](https://cran.r-project.org/package=survey) package; the Stata example uses the built-in `svy` commands.
 
 ::: {.panel-tabset group="language"}
 
@@ -82,102 +227,16 @@ datalibweb, token(<your datalibweb token>) version(2)
 
 ```r
 library(dlw)
-
-# all collections (servers) you can access
-dlw_server_catalog()
-
-# what is in a collection
-dlw_server_catalog("FDP")
-dlw_server_catalog("FDPRAW")
-
-# everything available for one country, across collections
-dlw_country_catalog("COL")
-
-# files for one country within a collection
-dlw_server_inventory("COL", server = "FDP")
-```
-
-## Stata
-
-```stata
-* interactive browser: click through region -> country -> collection
-datalibweb
-
-* list what is available for a country-year in a collection; when raw
-* data is requested, datalibweb lists the individual files to pick from
-datalibweb, country(COL) years(2023) type(FDP) clear
-```
-
-:::
-
-## Loading data
-
-::: {.panel-tabset group="language"}
-
-## R
-
-```r
-library(dlw)
-
-# harmonized 50by35 welfare module (WELF) from the FDP collection
-
-welf <- dlw_get_data(
-  country_code = "COL",
-  filename     = "COL_2023_GEIH_V01_M_V01_A_FDP_WELF.dta",
-  server       = "FDP",
-  year         = 2023
-)
-
-# a raw file from the FDPRAW collection; year and survey (acronym) disambiguate
-# the specific survey vintage — the R equivalent of Stata's surveyid()
-raw <- dlw_get_data(
-  country_code = "COL",
-  year         = 2023,
-  survey       = "GEIH",
-  filename     = "individual_data_2023.dta",
-  server       = "FDP"
-)
-
-```
-
-## Stata
-
-```stata
-* harmonized 50by35 welfare module (WELF) from the FDP collection;
-* the latest master and harmonization versions are loaded by default
-datalibweb, country(COL) years(2023) type(FDP) mod(WELF) clear
-
-* pin specific vintages for replicability
-dlw, country(COL) years(2023) type(FDP) mod(WELF) verm(01) vera(01) survey(GEIH) clear
-
-* a raw file from the FDPRAW collection
-datalibweb, country(COL) years(2023) type(FDPRAW) ///
-    surveyid(COL_2023_GEIH_V01_M) filename(individual_data_2023.dta) clear
-
-```
-
-:::
-
-## Calculating SR indicators
-
-::: {.panel-tabset group="language"}
-
-## R
-
-```r
-library(dlw)
+library(survey)
 source("R/utils.R")   # dlw_support_tables(), dlw_cpi_ppp(); run from the repository root
 
 # harmonized 50by35 welfare module (WELF) from the FDP collection
-
-welf <- dlw_get_data(
-  country_code = "COL",
-  filename     = "COL_2023_GEIH_V01_M_V01_A_FDP_WELF.dta",
+welf <- as.data.frame(dlw_get_data(
+  country_code = "TCD",
+  filename     = "TCD_2022_EHCVM_V01_M_V01_A_FDP_WELF.dta",
   server       = "FDP",
-  year         = 2023
-)
-
-# calculate SR indicator ----
+  year         = 2022
+))
 
 ccode <- welf$code[1]
 yr    <- welf$year[1]
@@ -186,45 +245,55 @@ yr    <- welf$year[1]
 # CPI is the survey-year CPI relative to 2021 (1 in 2021); PPP is the ICP 2021
 # conversion factor (LCU per international $).
 fx <- dlw_cpi_ppp(dlw_support_tables(), ccode, yr)
-cpi_value <- fx$cpi
-ppp_value <- fx$ppp
 
 # poverty line in $/day 2021 PPP (placeholder — pending confirmation)
 zline <- 3.00
 
-# self-reliance share: weighted proportion above the line using welfare_self
-sr_share <- weighted.mean(
-  welf$welfare_self / 365 / cpi_value / ppp_value >= zline,
-  welf$weight
-)
-
-# poverty headcount: weighted proportion below the line using welfare
-headcount <- weighted.mean(
-  welf$welfare / 365 / cpi_value / ppp_value < zline,
-  welf$weight
-)
-
-sprintf("%s %d - Self-reliance share: %.4f  Headcount: %.4f ($%.2f/day 2021PPP)", ccode, yr, sr_share, headcount, zline)
+# ---- indicators: 0/100 variables, so that their mean is a percentage -------
+# self-reliance uses welfare_self; poverty uses welfare
+welf$sr_intl <- 100 * (welf$welfare_self / 365 / fx$cpi / fx$ppp >= zline)
+welf$hc_intl <- 100 * (welf$welfare      / 365 / fx$cpi / fx$ppp <  zline)
 
 # primary indicator: national poverty line, if natpovline is in the file.
 # natpovline shares welfare's annual per capita LCU basis, so no CPI/PPP.
 if ("natpovline" %in% names(welf)) {
-  sr_share_nat <- weighted.mean(welf$welfare_self >= welf$natpovline, welf$weight)
-  headcount_nat <- weighted.mean(welf$welfare < welf$natpovline, welf$weight)
-  sprintf("National line - Self-reliance share (primary): %.4f  Headcount: %.4f",
-          sr_share_nat, headcount_nat)
+  welf$sr_nat <- 100 * (welf$welfare_self >= welf$natpovline)
+  welf$hc_nat <- 100 * (welf$welfare      <  welf$natpovline)
 }
+inds <- intersect(c("sr_nat", "hc_nat", "sr_intl", "hc_intl"), names(welf))
 
-# by camp status (camp may be missing for every row, e.g. in COL)
+# ---- survey design ----------------------------------------------------------
+# clusters: psu if available and complete, otherwise households; strata if
+# available and complete
+has <- function(v) v %in% names(welf) && !anyNA(welf[[v]])
+options(survey.lonely.psu = "adjust")   # strata with a single psu
+design <- svydesign(
+  ids     = if (has("psu")) ~psu else ~hhid,
+  strata  = if (has("strata")) ~strata else NULL,
+  weights = ~weight, nest = TRUE, data = welf
+)
+cl <- if (has("psu")) welf$psu else welf$hhid
+
+# ---- estimates with standard errors and 95% CIs ----------------------------
+est <- function(d, label, rows) {
+  m  <- svymean(reformulate(inds), d)
+  ci <- confint(m, df = degf(design))
+  out <- data.frame(group = label, indicator = inds, estimate = coef(m),
+                    se = SE(m), ci_low = ci[, 1], ci_high = ci[, 2], row.names = NULL)
+  # a standard error needs at least two clusters in the group
+  if (length(unique(cl[rows])) < 2) out[c("se", "ci_low", "ci_high")] <- NA
+  out
+}
+res <- est(design, "All", rep(TRUE, nrow(welf)))
+
+# by camp status, as subpopulations of the design
+# (camp may be missing for every row in some surveys, e.g. COL)
 camp <- as.integer(welf$camp)
 for (l in sort(unique(camp[!is.na(camp)]))) {
-  g <- welf[camp %in% l, ]
-  print(sprintf("camp==%d - Self-reliance share ($%.2f/day): %.4f", l, zline,
-                weighted.mean(g$welfare_self / 365 / cpi_value / ppp_value >= zline, g$weight)))
-  if ("natpovline" %in% names(g))
-    print(sprintf("camp==%d - Self-reliance share (national line): %.4f", l,
-                  weighted.mean(g$welfare_self >= g$natpovline, g$weight)))
+  res <- rbind(res, est(subset(design, camp %in% l),
+                        c("Non-camp", "Camp")[l + 1], camp %in% l))
 }
+print(res, digits = 4)
 ```
 
 ## Stata
@@ -232,7 +301,7 @@ for (l in sort(unique(camp[!is.na(camp)]))) {
 ```stata
 * harmonized 50by35 welfare module (WELF) from the FDP collection;
 * the latest master and harmonization versions are loaded by default
-datalibweb, country(COL) years(2023) type(FDP) mod(WELF) clear
+datalibweb, country(TCD) years(2022) type(FDP) mod(WELF) clear
 
 * calculate SR indicator
 local ccode = code[1]
@@ -250,45 +319,54 @@ local pppval = r(ppp)
 * poverty line in $/day 2021 PPP (placeholder — pending confirmation)
 local zline 3.00
 
-* self-reliance share: weighted proportion above the line using welfare_self
-gen byte _sr = (welfare_self/365/`cpival'/`pppval') >= `zline'
-qui sum _sr [aw=weight]
-local sr : di %9.6f r(mean)
-
-* poverty headcount: weighted proportion below the line using welfare
-gen byte _poor = (welfare/365/`cpival'/`pppval') < `zline'
-qui sum _poor [aw=weight]
-local hc : di %9.6f r(mean)
-
-drop _sr _poor
-di "`ccode' `year' - Self-reliance share: `sr'  Headcount: `hc' ($`zline'/day 2021PPP)"
+* ---- indicators: 0/100 variables, so that their mean is a percentage -------
+* self-reliance (_sr_*) uses welfare_self; poverty (_hc_*) uses welfare
+gen double _sr_intl = 100*((welfare_self/365/`cpival'/`pppval') >= `zline')
+gen double _hc_intl = 100*((welfare/365/`cpival'/`pppval') < `zline')
+local inds _sr_intl _hc_intl
 
 * primary indicator: national poverty line, if natpovline is in the file.
 * natpovline shares welfare's annual per capita LCU basis, so no CPI/PPP.
 capture confirm variable natpovline
 if !_rc {
-    gen byte _sr_nat = welfare_self >= natpovline
-    qui sum _sr_nat [aw=weight]
-    di "National line - Self-reliance share (primary): " %9.6f r(mean)
-    gen byte _poor_nat = welfare < natpovline
-    qui sum _poor_nat [aw=weight]
-    di "National line - Headcount: " %9.6f r(mean)
+    gen double _sr_nat = 100*(welfare_self >= natpovline)
+    gen double _hc_nat = 100*(welfare < natpovline)
+    local inds _sr_nat _hc_nat `inds'
 }
 
-* by camp status (camp may be missing for every row, e.g. in COL)
-gen byte _sr = (welfare_self/365/`cpival'/`pppval') >= `zline'
-capture confirm variable _sr_nat
-local hasnat = !_rc
-qui levelsof camp, local(camplevels)
-foreach l of local camplevels {
-    qui sum _sr if camp==`l' [aw=weight]
-    di "camp==`l' - Self-reliance share ($`zline'/day): " %9.6f r(mean)
-    if `hasnat' {
-        qui sum _sr_nat if camp==`l' [aw=weight]
-        di "camp==`l' - Self-reliance share (national line): " %9.6f r(mean)
-    }
+* ---- survey design -------------------------------------------------------------
+* clusters: psu if available and complete, otherwise households; strata if
+* available and complete
+local clustervar hhid
+capture confirm variable psu
+if !_rc {
+    quietly count if missing(psu)
+    if r(N) == 0 local clustervar psu
 }
-capture drop _sr _sr_nat _poor_nat
+local stratavar
+capture confirm variable strata
+if !_rc {
+    quietly count if missing(strata)
+    if r(N) == 0 local stratavar strata
+}
+if "`stratavar'" != "" {
+    svyset `clustervar' [pw=weight], strata(`stratavar') singleunit(centered)
+}
+else {
+    svyset `clustervar' [pw=weight], singleunit(centered)
+}
+
+* ---- estimates with standard errors and 95% CIs --------------------------------
+svy: mean `inds'
+
+* by camp status, as subpopulations of the design
+* (camp may be missing for every row in some surveys, e.g. COL)
+quietly levelsof camp, local(camplevels)
+foreach l of local camplevels {
+    di as result "camp==`l'"
+    svy, subpop(if camp==`l'): mean `inds'
+}
 ```
 
 :::
+

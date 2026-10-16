@@ -13,21 +13,21 @@ Before a survey can be harmonized, its raw microdata should exist on **datalibwe
 Query datalibweb to confirm whether the raw survey is already present before starting a new upload transaction.
 :::
 
-## Uploading via PRIMUS
+## Steps at a glance
 
-Raw files are uploaded as a PRIMUS **transaction** using the `FDPRaw-data` process (`processid = 39`) by users with uploader status. A raw data upload starts with a `new` file that returns a transaction ID; additional files are then attached to that same transaction ID. Specify the destination `folderpath` and `type(raw)`.
+Choose R or Stata, whichever you prefer. The steps are the same.
 
-::: {.callout-tip}
-## Include supporting documents
-Upload the survey **documentation and questionnaires** together with the raw data, so the source instruments travel with the microdata on datalibweb. Add them as additional files on the same transaction ID, using the folder path matching the file type:
+1. **Set up once.** Install the PRIMUS client and save your datalibweb token ([Step 1](#sec-raw-setup)).
+2. **Prepare your files.** Gather the raw `.dta` files and any questionnaires, and pick the survey ID ([Step 2](#sec-raw-prepare)).
+3. **Run the upload script.** Edit a few lines at the top of `R/01_upload_raw.R` or `Stata/01_upload_raw.do` and run it ([Step 3](#sec-raw-run)).
+4. **Check the result.** The script prints a transaction ID; the transaction then waits for an approver ([Step 4](#sec-raw-check)).
+5. **Wait for approval.** Once approved, the files appear on datalibweb and can be harmonized ([Reviewing & approving](#reviewing-approving-via-primus)).
 
-| Folder path | Extensions |
-|---|---|
-| `Doc/Questionnaires` | `doc`, `docx`, `pdf`, `rar`, `xls`, `xlsx`, `zip` |
-| `Data/Stata` | `dta` |
-:::
+## Step by step
 
-Users can interact with PRIMUS via the [web interface](https://primusuiprod.ase.worldbank.org) or programmatically using the [`primus` Stata package](https://github.com/worldbank/primus) (Windows) or the [`primus` R package](https://github.com/worldbank/primus-r) (cross-platform). Both call the same PRIMUS API; use whichever matches your harmonization workflow.
+### Step 1. Set up once {#sec-raw-setup}
+
+You need a PRIMUS client (the R or the Stata package) and a **datalibweb token**. Do this once; repeat only when your token expires (every 30 days).
 
 ::: {.callout-note}
 ## Install a client
@@ -42,19 +42,17 @@ Users can interact with PRIMUS via the [web interface](https://primusuiprod.ase.
 - **Stata (Windows):** Download and extract the [PRIMUS repository](https://github.com/worldbank/primus). In Stata, run `sysdir`; copy the *contents* of `Stata/plus/p` into a `p` folder under the `PLUS` directory. Restart Stata and verify with `which primus`.
 :::
 
-### Authentication
-
-Both clients use the same **datalibweb token** (valid 30 days, renewed on the [datalibweb website](https://datalibweb2.worldbank.org)). Set up the PRIMUS client once per user; it stores the credential for later runs. Repeat the setup after renewing an expired token.
+Then save your token. Get it from the [datalibweb website](https://datalibweb2.worldbank.org) (valid 30 days). Do not type it into a script.
 
 ::: {.panel-tabset group="language"}
 
 ## R
 
 ```r
-primus_set_token("<your datalibweb token>")  # one-time setup; stored for later runs
+primus_set_token("<your datalibweb token>")  # stored in the system keychain
 ```
 
-The R PRIMUS and `dlw` packages use the same token and store it in the system keychain. You do not need to call `primus_set_token()` for every upload or access; call it again after renewing or replacing the token.
+The R PRIMUS and `dlw` packages share this token. Run the line again only after renewing it.
 
 ## Stata
 
@@ -62,9 +60,77 @@ The R PRIMUS and `dlw` packages use the same token and store it in the system ke
 primus register, token(<your datalibweb token>)
 ```
 
-Register the token once with the Stata PRIMUS client, then repeat registration after renewal.
+Repeat after renewing the token.
 
 :::
+
+Finally, download this repository to your computer. You run the scripts from its main folder: in R, open the folder as your project or use `setwd()`; in Stata, use `cd`.
+
+### Step 2. Prepare your files {#sec-raw-prepare}
+
+You need:
+
+- **The raw data files**, as Stata `.dta` files (for example a household file and an individual file).
+- **Questionnaires and documentation** (optional but recommended), as `.pdf`, `.doc(x)`, `.xls(x)`, `.zip` or `.rar`. They travel with the data on datalibweb.
+- **A survey ID** in the form `CCC_YYYY_SSSS_V01_M`: country code, year the data collection started, survey acronym, and `V01` for a first release (for example `COL_2023_GEIH_V01_M`).
+- **The folder with your raw data files.** In Stata, edit the `local rawroot` line at the top of the script. In R, set the `REFUGEE_RAW_DATA` environment variable (on Windows, use Start menu search for **Edit environment variables for your account**, add a user variable with that name, then restart R) or replace the `rawroot` line in the script with your folder path.
+
+### Step 3. Run the upload script {#sec-raw-run}
+
+1. Open `R/01_upload_raw.R` or `Stata/01_upload_raw.do`.
+2. In the parameters block, set the **survey ID** and the **list of files** (and `docs`, the questionnaires). Each script has ready-made example blocks to copy.
+3. Run the whole script.
+
+::: {.panel-tabset group="language"}
+
+## R
+
+```r
+source("R/01_upload_raw.R")
+```
+
+## Stata
+
+```stata
+do "Stata/01_upload_raw.do"
+```
+
+:::
+
+The script opens a transaction with the first file, attaches the other files to it, and **confirms** it so approvers can see it.
+
+::: {.callout-tip}
+## Practice first (draft only)
+To try the upload without sending it to approvers, delete the last step before running: the `primus_confirm(...)` line in R, or the `primus action ... decision(confirm)` command in Stata. The transaction then stays a private **draft**. You can view and delete it in the [PRIMUS web interface](https://primusuiprod.ase.worldbank.org); the R and Stata packages cannot delete a draft.
+:::
+
+### Step 4. Check the result {#sec-raw-check}
+
+The script prints `Opened transaction ...` with the transaction ID, and at the end `Raw upload confirmed`. Keep the transaction ID: it identifies your upload in PRIMUS. In the web interface, a confirmed transaction appears under **Pending**; an unconfirmed one under **Draft**.
+
+### If something goes wrong
+
+| What you see | What it means | What to do |
+|---|---|---|
+| Token or login error | Your datalibweb token has expired | Get a new token and repeat the token step in Step 1 |
+| `Set REFUGEE_RAW_DATA ...` (R) or file not found | The raw data folder is not set or is wrong | Set the folder as described in Step 2 |
+| File or folder not accepted | The file type does not match the folder | `.dta` goes in `Data/Stata`; documents go in `Doc/Questionnaires` |
+| Survey ID not accepted, or an open transaction already exists | A survey can have only one open transaction, and a new version (`V02`) needs `V01` approved first | Ask the approver to approve or reject the earlier one, or delete your draft in the web interface |
+
+## How it works {#sec-raw-how}
+
+This section is for reference. The scripts above run these commands; you can also run them yourself.
+
+Raw files are uploaded as a PRIMUS **transaction** using the `FDPRaw-data` process (`processid = 39`) by users with uploader status. A raw data upload starts with a `new` file that returns a transaction ID; additional files are then attached to that same transaction ID. Specify the destination `folderpath` and `type(raw)`.
+
+Both clients call the same PRIMUS API. You can also upload through the [web interface](https://primusuiprod.ase.worldbank.org), or programmatically with the [`primus` Stata package](https://github.com/worldbank/primus) (Windows) or the [`primus` R package](https://github.com/worldbank/primus-r) (cross-platform).
+
+Upload the survey **documentation and questionnaires** together with the raw data, so the source instruments travel with the microdata on datalibweb. Add them as additional files on the same transaction ID, using the folder path matching the file type:
+
+| Folder path | Extensions |
+|---|---|
+| `Doc/Questionnaires` | `doc`, `docx`, `pdf`, `rar`, `xls`, `xlsx`, `zip` |
+| `Data/Stata` | `dta` |
 
 ::: {.panel-tabset group="language"}
 

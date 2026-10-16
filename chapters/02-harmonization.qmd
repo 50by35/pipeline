@@ -7,7 +7,25 @@ date: today
 
 Once raw microdata is available on datalibweb, it is harmonized to the **50by35 schema** (see [Schema & Variable Dictionary](05-schema.qmd)). Harmonization maps survey-specific variables, codes, and units onto the mandatory and optional variables defined by the schema, so that welfare and self-reliance indicators are comparable across surveys, countries, and years.
 
-## Sample harmonization scripts
+::: {.callout-note}
+## This chapter is guidance, not a recipe
+How to harmonize a survey depends on the survey: its questionnaire, how refugees are identified, and how welfare is measured all differ. This chapter does **not** give step-by-step instructions for constructing each variable. It gives:
+
+- the **guidelines** that every harmonization must follow ([below](#sec-harm-guidelines)), and
+- **example scripts** for 15 surveys to use as a starting point ([below](#sec-harm-examples)).
+
+You write your own survey-specific script, check the result against the schema ([validation](#sec-harm-validate)), and then [upload it](03-harmonized-upload.qmd).
+:::
+
+## How to approach a new survey
+
+1. **Read the [schema](05-schema.qmd)** to see which variables are mandatory, which are optional, and what format each must have.
+2. **Define the refugee sample** from the survey's own classification variables, and document it in the script header.
+3. **Pick the closest example script** below (same survey family, same welfare type, or same country) and adapt it.
+4. **Write your own script** that retrieves the raw files from datalibweb, builds the variables, and saves `<survey ID>_WELF.dta`.
+5. **Validate** the file against the schema, fix any errors, and then upload it.
+
+## Example harmonization scripts {#sec-harm-examples}
 
 Example harmonization scripts covering 15 country/survey combinations are available in the `Stata/` folder of this repository. They are not intended to be used as-is, but illustrate the harmonization process and provide a starting point for writing survey-specific scripts. "Refugee definition" is abbreviated below — see each script's header comment for the full sample restriction. `welfare_self` formulas omit the floor-at-zero (and, where applicable, cap-at-`welfare`) wrapper for brevity — see the script for the exact expression:
 
@@ -29,7 +47,9 @@ Example harmonization scripts covering 15 country/survey combinations are availa
 | TCD | 2022 | EHCVM | Consumption | `pop_group` 1–2, 6 (+other-country refugee) | `welfare` − `income_aid` (HH aid income) | [do-file](https://github.com/50by35/pipeline/blob/main/Stata/TCD_2022_EHCVM_V01_M_V01_A_FDP_WELF.do) |
 | UGA | 2018 | RHS | Consumption | `refugee_status==1` | `cons_agg_less_aid` (consumption net of aid, source-provided) | [do-file](https://github.com/50by35/pipeline/blob/main/Stata/UGA_2018_RHS_V01_M_V01_A_FDP_WELF.do) |
 
-Common conventions across all scripts:
+## Guidelines for every survey {#sec-harm-guidelines}
+
+These conventions apply to every harmonization, whatever the survey:
 
 - **Sample**: refugees only — the 50by35 monitoring population excludes IDPs and asylum-seekers. Each script's comment header documents the full survey-specific classification (population group codes, nationality, birth country, etc.). One exception: Cameroon FDS 2025 codes refugees and asylum-seekers under a single combined category (`pops==1`) with no variable in any of the raw files to separate them — flagged in that script and pending a fix from the source data provider.
 - **`welfare`**: the survey's official welfare aggregate, converted to **annual per capita LCU**.
@@ -40,11 +60,13 @@ Common conventions across all scripts:
 
 
 ::: {.callout-tip}
-## `DLW_TOKEN`
-The sample Stata harmonization scripts in this repository retrieve their raw inputs directly from the datalibweb **`FDPRAW`** collection. They use `DLW_TOKEN` from the environment to set the datalibweb token without exposing them. To set this up on **Windows:** use Start menu search for **Edit environment variables for your account**, add a user variable named `DLW_TOKEN` with your token, then restart Stata. Before running a script, confirm that you have access to the collection, a working datalibweb Stata package, and a valid token. See [Access Data](04-access.qmd) for more examples.
+## Datalibweb access
+The sample Stata harmonization scripts in this repository retrieve their raw inputs directly from the datalibweb **`FDPRAW`** collection. Before running a script, confirm that you have access to the collection, a working datalibweb Stata package, and your datalibweb token saved in the package (`datalibweb, token(...)`, see [Access Data](04-access.qmd#sec-access-token)). Each script also has a `local outdir` line near the top: edit it to the folder where the harmonized `_WELF.dta` should be saved.
 :::
 
-After harmonizing, check the file against the schema before upload:
+## Check your file against the schema {#sec-harm-validate}
+
+After harmonizing, check the file against the schema before upload. The upload scripts run the same check, so any problem is caught either way. Run these from the repository's main folder, since they load `R/validate_50by35.R` or `Stata/validate_50by35.do` by relative path:
 
 ::: {.panel-tabset group="language"}
 
