@@ -16,9 +16,9 @@ The harmonized welfare module in the `FDP` collection is called **`WELF`**.
 
 ## Steps at a glance
 
-Choose R or Stata, whichever you prefer. The steps are the same.
+Choose R or Stata, the steps are the same.
 
-1. **Get access.** Register on datalibweb and subscribe to the collections you need ([Step 1](#sec-access-permission)).
+1. **Request access.** Register on datalibweb and subscribe to the surveys you need ([Step 1](#sec-access-permission)).
 2. **Save your token once.** Install the client and save your datalibweb token ([Step 2](#sec-access-token)).
 3. **Find your survey.** Check what is available for your country ([Step 3](#sec-access-find)).
 4. **Load the data.** Download the harmonized file into R or Stata ([Step 4](#sec-access-load)).

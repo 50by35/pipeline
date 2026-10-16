@@ -324,6 +324,102 @@ if !_rc {
         exit 459
     }
 }
+* camp location, aligned with the UNHCR PoC layer (strings are empty when
+* unknown). The pcode is checked for format only: no lookup in the layer.
+local campvars ""
+foreach v in camp_pcode camp_name camp_lat camp_lon {
+    capture confirm variable `v'
+    if !_rc local campvars "`campvars' `v'"
+}
+foreach v in camp_pcode camp_name {
+    capture confirm variable `v'
+    if !_rc {
+        capture confirm string variable `v'
+        if _rc {
+            di as error "SCHEMA ERROR: `v' must be a string"
+            exit 459
+        }
+    }
+}
+foreach v in camp_lat camp_lon {
+    capture confirm variable `v'
+    if !_rc {
+        capture confirm numeric variable `v'
+        if _rc {
+            di as error "SCHEMA ERROR: `v' must be numeric"
+            exit 459
+        }
+        local vtype : type `v'
+        if "`vtype'" == "float" {
+            di as error "SCHEMA ERROR: `v' must not use float storage (use double)"
+            exit 459
+        }
+    }
+}
+capture confirm variable camp_pcode
+if !_rc {
+    capture assert regexm(camp_pcode, "^[A-Z][A-Z][A-Z]s[0-9][0-9][0-9][0-9][0-9][0-9]$") | camp_pcode == ""
+    if _rc {
+        di as error "SCHEMA ERROR: camp_pcode must be ISO3 + s + 6 digits (e.g. UGAs002611)"
+        exit 459
+    }
+}
+capture confirm variable camp_lat
+if !_rc {
+    capture assert inrange(camp_lat, -90, 90) | missing(camp_lat)
+    if _rc {
+        di as error "SCHEMA ERROR: camp_lat must be between -90 and 90"
+        exit 459
+    }
+}
+capture confirm variable camp_lon
+if !_rc {
+    capture assert inrange(camp_lon, -180, 180) | missing(camp_lon)
+    if _rc {
+        di as error "SCHEMA ERROR: camp_lon must be between -180 and 180"
+        exit 459
+    }
+}
+capture confirm variable camp_lat camp_lon
+if !_rc {
+    capture assert missing(camp_lat) == missing(camp_lon)
+    if _rc {
+        di as error "SCHEMA ERROR: camp_lat and camp_lon must be both present or both missing in each row"
+        exit 459
+    }
+    qui count if camp_lat == 0 & camp_lon == 0
+    if r(N) > 0 {
+        di as txt "SCHEMA WARNING: camp_lat and camp_lon are both 0 in " r(N) " obs"
+    }
+}
+foreach v of local campvars {
+    capture assert missing(`v') if camp == 0
+    if _rc {
+        di as error "SCHEMA ERROR: `v' must be empty or missing where camp is 0"
+        exit 459
+    }
+    qui count if !missing(`v') & missing(camp)
+    if r(N) > 0 {
+        di as txt "SCHEMA WARNING: `v' is filled where camp is missing (" r(N) " obs)"
+    }
+}
+capture confirm variable camp_pcode
+if !_rc {
+    foreach v in camp_name camp_lat camp_lon {
+        capture confirm variable `v'
+        if !_rc {
+            tempvar t n t2
+            qui egen `t' = tag(camp_pcode `v') if camp_pcode != "" & !missing(`v')
+            qui bysort camp_pcode: egen `n' = total(`t')
+            qui egen `t2' = tag(camp_pcode) if `n' > 1 & camp_pcode != ""
+            qui count if `t2' == 1
+            if r(N) > 0 {
+                di as txt "SCHEMA WARNING: `v' takes more than one value within " r(N) " camp_pcode(s)"
+            }
+            drop `t' `n' `t2'
+        }
+    }
+}
 foreach v in strata psu {
     capture confirm variable `v'
     if !_rc {
@@ -364,9 +460,13 @@ local lab_strata       "Sampling strata"
 local lab_psu          "Primary sampling unit"
 local lab_natpovline   "National poverty line (LCU, annual per capita)"
 local lab_arrival_year "Year of arrival"
+local lab_camp_pcode   "UNHCR camp location code (pcode)"
+local lab_camp_name    "Camp name"
+local lab_camp_lat     "Camp latitude (decimal degrees)"
+local lab_camp_lon     "Camp longitude (decimal degrees)"
 foreach v in code year survname hhid pid welfare welfare_self welfare_type ///
              weight camp urban hhsize age male educat4 empstat strata psu ///
-             natpovline arrival_year {
+             natpovline arrival_year camp_pcode camp_name camp_lat camp_lon {
     capture confirm variable `v'
     if !_rc {
         local actual : variable label `v'

@@ -6,7 +6,7 @@ date: today
 ## Overview
 
 Before a survey can be harmonized, its raw microdata should exist on **datalibweb**. If a raw dataset is not already available there (e.g. on the GMD or region server), it must first be uploaded through
-**PRIMUS**.
+**PRIMUS**. This can be done using the web interface or the R or Stata clients. 
 
 ::: {.callout-tip}
 ## Check first
@@ -15,9 +15,9 @@ Query datalibweb to confirm whether the raw survey is already present before sta
 
 ## Steps at a glance
 
-Choose R or Stata, whichever you prefer. The steps are the same.
+The steps are the same for R and Stata:
 
-1. **Set up once.** Install the PRIMUS client and save your datalibweb token ([Step 1](#sec-raw-setup)).
+1. **Set up.** Install the PRIMUS client and save your datalibweb token ([Step 1](#sec-raw-setup)).
 2. **Prepare your files.** Gather the raw `.dta` files and any questionnaires, and pick the survey ID ([Step 2](#sec-raw-prepare)).
 3. **Run the upload script.** Edit a few lines at the top of `R/01_upload_raw.R` or `Stata/01_upload_raw.do` and run it ([Step 3](#sec-raw-run)).
 4. **Check the result.** The script prints a transaction ID; the transaction then waits for an approver ([Step 4](#sec-raw-check)).
@@ -64,7 +64,7 @@ Repeat after renewing the token.
 
 :::
 
-Finally, download this repository to your computer. You run the scripts from its main folder: in R, open the folder as your project or use `setwd()`; in Stata, use `cd`.
+Finally, download this repository or the prepared scripts to your computer. You run the scripts from its main folder: in R, open the folder as your project or use `setwd()`; in Stata, use `cd`.
 
 ### Step 2. Prepare your files {#sec-raw-prepare}
 
