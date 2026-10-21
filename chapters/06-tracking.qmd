@@ -1,0 +1,308 @@
+---
+title: "Data Coverage"
+code-tools: false
+execute:
+  echo: false
+---
+
+```{=html}
+<style>
+.trk { --ink2: #52514e; --muted: #6f6d67; --grid: #e1e0d9; --axis: #c3c2b7; --border: rgba(11,11,11,.12);
+  --surface: #fcfcfb; --land: #e9e8e2; --s1: #2a78d6; --s2: #eb6834;
+  --map1: #6da7ec; --map2: #1c5cab; --mapraw: #f2a47f; --hatch: rgba(11,11,11,.13);
+  --b5: #184f95; --b4: #2a78d6; --b3: #6da7ec; --b2: #9ec5f4; --b1: #cde2fb; --b0: #f0efec;
+  --b5-ink: #fff; --b4-ink: #fff; --b3-ink: #0b0b0b; --b2-ink: #0b0b0b; --b1-ink: #0b0b0b; --b0-ink: #52514e; }
+.trk-date { display: inline-block; font-size: .8rem; color: var(--ink2); background: var(--b0);
+  border-radius: 999px; padding: 2px 10px; margin: 0 0 12px; }
+.trk-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 16px; margin: 0 0 16px; min-width: 0; }
+.trk-sub { color: var(--muted); font-size: .85rem; margin: 0 0 12px; }
+.trk-kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; margin: 0 0 8px; }
+.trk-kpi { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 12px 14px; }
+.trk-kpi .v { font-size: 1.6rem; font-weight: 650; line-height: 1.1; white-space: nowrap; }
+.trk-kpi .l { color: var(--ink2); font-size: .8rem; }
+.trk-legend { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: .8rem; color: var(--ink2); margin-top: 12px; align-items: center; }
+.trk-legend i { display: inline-block; width: 12px; height: 12px; border-radius: 3px; vertical-align: -2px; margin-right: 5px; }
+.trk-scroll { overflow-x: auto; }
+.trk-hm { display: grid; gap: 2px; font-size: 12px; min-width: max-content; }
+.trk-hm .hdr { writing-mode: vertical-rl; transform: rotate(180deg); color: var(--ink2); padding: 4px 0; white-space: nowrap; align-self: end; justify-self: center; font-family: monospace; font-size: 11px; }
+.trk-hm .grp { color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: .05em; border-bottom: 1px solid var(--axis); padding-bottom: 2px; text-align: center; white-space: nowrap; }
+.trk-hm .rl { padding-right: 10px; white-space: nowrap; display: flex; align-items: center; gap: 6px; height: 24px; }
+.trk-hm .rl .yr { color: var(--muted); }
+.trk-hm .sep { grid-column: 1 / -1; height: 4px; }
+.trk-cell { height: 24px; min-width: 24px; border-radius: 4px; display: flex; align-items: center; justify-content: center; font-size: 10.5px; }
+.trk-cell.b5 { background: var(--b5); color: var(--b5-ink); } .trk-cell.b4 { background: var(--b4); color: var(--b4-ink); }
+.trk-cell.b3 { background: var(--b3); color: var(--b3-ink); } .trk-cell.b2 { background: var(--b2); color: var(--b2-ink); }
+.trk-cell.b1 { background: var(--b1); color: var(--b1-ink); } .trk-cell.b0 { background: var(--b0); color: var(--b0-ink); }
+.trk-cell.na { background: repeating-linear-gradient(135deg, var(--hatch) 0 2px, transparent 2px 6px); }
+.trk-cell:hover { outline: 2px solid #0b0b0b; outline-offset: 1px; }
+.trk-legend .trk-cell { min-width: 0; height: 12px; }
+.trk-vbars { display: grid; grid-template-columns: max-content 1fr max-content; gap: 6px 10px; align-items: center; font-size: .8rem; }
+.trk-vbars code { background: none; padding: 0; }
+.trk-vbars .track { height: 10px; background: var(--b0); border-radius: 4px; position: relative; }
+.trk-vbars .fill { position: absolute; inset: 0 auto 0 0; background: var(--s1); border-radius: 4px; }
+.trk-vbars .n { color: var(--ink2); text-align: right; }
+.trk svg { display: block; width: 100%; height: auto; }
+.trk svg text { fill: var(--ink2); font: 13px system-ui, sans-serif; }
+.trk svg .muted { fill: var(--muted); font-size: 12px; }
+.trk svg .gridline { stroke: var(--grid); } .trk svg .axisline { stroke: var(--axis); }
+.trk svg .land { fill: var(--land); stroke: var(--land); stroke-width: .3; }
+.trk svg .border { fill: none; stroke: #9d9b94; stroke-width: .6; stroke-linecap: round; pointer-events: none; }
+.trk-note { color: var(--muted); font-size: .72rem; line-height: 1.35; margin: 8px 0 0; }
+.trk svg .c1 { fill: var(--map1); } .trk svg .c2 { fill: var(--map2); } .trk svg .craw { fill: var(--mapraw); }
+.trk svg .mk { stroke: var(--surface); stroke-width: 2; }
+.trk svg .lbl { fill: #0b0b0b; font-weight: 600; font-size: 13px; paint-order: stroke; stroke: var(--surface); stroke-width: 3px; }
+#trk-tip { position: fixed; pointer-events: none; z-index: 10; max-width: 280px; background: #fff; color: #0b0b0b;
+  border: 1px solid rgba(11,11,11,.12); border-radius: 8px; padding: 8px 10px; font-size: 12.5px; line-height: 1.4; box-shadow: 0 6px 24px rgba(0,0,0,.14); }
+#trk-tip b { display: block; margin-bottom: 2px; }
+#trk-tip .k { color: #6f6d67; }
+</style>
+<div id="trk-tip" hidden></div>
+```
+
+```{ojs}
+D = FileAttachment("tracking/coverage.json").json()
+// World Bank official boundaries, written by R/tracking_boundaries.R
+wbCountries = FileAttachment("tracking/countries.geojson").json()
+wbDisputed = FileAttachment("tracking/disputed.geojson").json()
+wbBorders = FileAttachment("tracking/borders.geojson").json()
+d3 = require("d3@7")
+
+// display names; must match WB_ADM0_NA in tracking/countries.geojson
+NAMES = ({ CHL: "Chile", CMR: "Cameroon", COL: "Colombia", CRI: "Costa Rica", ETH: "Ethiopia",
+  JOR: "Jordan", LBN: "Lebanon", NER: "Niger", PER: "Peru", PSE: "West Bank and Gaza",
+  TCD: "Chad", UGA: "Uganda" })
+REGION = ({ CHL: "Latin America and Caribbean", COL: "Latin America and Caribbean",
+  CRI: "Latin America and Caribbean", PER: "Latin America and Caribbean",
+  CMR: "Western and Central Africa", NER: "Western and Central Africa", TCD: "Western and Central Africa",
+  ETH: "Eastern and Southern Africa", UGA: "Eastern and Southern Africa",
+  JOR: "Middle East and North Africa", LBN: "Middle East and North Africa", PSE: "Middle East and North Africa" })
+WTYPE = ({ 1: "Consumption", 2: "Income", 3: "Expenditure" })
+CORE = ["code", "year", "survname", "hhid", "pid", "welfare", "welfare_self", "welfare_type", "weight"]
+CAMPURB = ["camp", "urban"]
+OPT = ["natpovline", "hhsize", "age", "male", "educat4", "empstat", "arrival_year",
+  "camp_pcode", "camp_name", "camp_lat", "camp_lon", "strata", "psu"]
+BINS = [["b5", "100%"], ["b4", "95-99.9%"], ["b3", "75-95%"], ["b2", "50-75%"], ["b1", "1-50%"], ["b0", "0% (all missing)"]]
+
+esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]))
+fmt = d3.format(",")
+harm = D.surveys
+raw = D.raw_only
+all = [...harm.map(s => ({ ...s, stage: "approved" })), ...raw.map(r => ({ ...r, stage: "raw" }))]
+  .sort((a, b) => NAMES[a.code].localeCompare(NAMES[b.code]) || a.year - b.year)
+countries = [...new Set(all.map(s => s.code))]
+years = d3.extent(all, s => s.year)
+nHarm = c => harm.filter(s => s.code === c).length
+label = s => `${esc(NAMES[s.code])} ${s.year} ${esc(s.survey)}`
+cov = (s, v) => s.missing[v] == null ? null : Math.round((100 - s.missing[v]) * 10) / 10
+bin = c => c == null ? "na" : c >= 100 ? "b5" : c >= 95 ? "b4" : c >= 75 ? "b3" : c >= 50 ? "b2" : c > 0 ? "b1" : "b0"
+cellHTML = (s, v) => {
+  const c = cov(s, v);
+  const tip = `<b>${label(s)}</b><code>${esc(v)}</code>: ` + (c == null ? "not in file" : `${c}% non-missing`);
+  return `<div class="trk-cell ${bin(c)}" data-tip="${esc(tip)}">${c != null && c < 100 ? Math.floor(c) : ""}</div>`;
+}
+asEl = (cls, htmlStr) => { const el = document.createElement("div"); el.className = cls; el.innerHTML = htmlStr; return el; }
+```
+
+```{ojs}
+// snapshot date and headline numbers; also installs the hover tooltip
+{
+  const tipEl = document.getElementById("trk-tip");
+  if (!window.__trkTip) {
+    window.__trkTip = true;
+    document.addEventListener("pointermove", e => {
+      const t = e.target.closest && e.target.closest("[data-tip]");
+      if (!t) { tipEl.hidden = true; return; }
+      tipEl.innerHTML = t.getAttribute("data-tip");
+      tipEl.hidden = false;
+      const r = tipEl.getBoundingClientRect();
+      let x = e.clientX + 14, y = e.clientY + 14;
+      if (x + r.width > innerWidth - 8) x = e.clientX - r.width - 14;
+      if (y + r.height > innerHeight - 8) y = e.clientY - r.height - 14;
+      tipEl.style.left = x + "px"; tipEl.style.top = y + "px";
+    });
+  }
+  const updated = new Date(D.generated).toLocaleDateString("en-GB",
+    { day: "numeric", month: "long", year: "numeric", timeZone: "UTC" });
+  const kpis = [
+    [new Set(harm.map(s => s.code)).size, "countries with harmonized data"],
+    [harm.length, "harmonized surveys"],
+    [raw.length, "raw surveys awaiting harmonization"],
+    [`${years[0]}-${String(years[1]).slice(2)}`, "survey years"]
+  ];
+  return asEl("trk", `<span class="trk-date">Last updated ${updated}</span>` +
+    `<div class="trk-kpis">${kpis.map(([v, l]) =>
+      `<div class="trk-kpi"><div class="v">${v}</div><div class="l">${l}</div></div>`).join("")}</div>`);
+}
+```
+
+## Countries
+
+```{ojs}
+{
+  const LABEL_POS = { LBN: [-8, -6, "end"], PSE: [-8, 8, "end"], JOR: [9, 8, "start"], NER: [-9, 4, "end"],
+    CMR: [-9, 6, "end"], UGA: [-9, 6, "end"], CRI: [-9, 2, "end"] };
+  // d3 wants clockwise outer rings; GeoJSON (RFC 7946) has them counter-clockwise.
+  // A polygon covering more than half the globe has the wrong winding: reverse it.
+  const rewind = f => {
+    // rounding can leave a stray point or line inside a collection; d3 would draw a point as a circle
+    if (f.geometry.type === "GeometryCollection")
+      f.geometry.geometries = f.geometry.geometries.filter(g => /Polygon$/.test(g.type));
+    if (d3.geoArea(f) > 2 * Math.PI) {
+      const g = f.geometry;
+      const rev = poly => poly.map(ring => ring.slice().reverse());
+      if (g.type === "Polygon") g.coordinates = rev(g.coordinates);
+      else if (g.type === "MultiPolygon") g.coordinates = g.coordinates.map(rev);
+      else if (g.type === "GeometryCollection") g.geometries.forEach(p => rewind({ type: "Feature", geometry: p }));
+    }
+    return f;
+  };
+  const feats = wbCountries.features.map(rewind);
+  const disputed = wbDisputed.features.map(rewind);
+  const byName = Object.fromEntries(Object.entries(NAMES).map(([k, v]) => [v, k]));
+  const code = f => byName[f.properties.name];
+  const covered = feats.filter(code);
+  const W = 800, H = 480;
+  const proj = d3.geoEqualEarth().fitExtent([[20, 16], [W - 20, H - 16]], { type: "FeatureCollection", features: covered });
+  const path = d3.geoPath(proj);
+  const svg = d3.create("svg").attr("viewBox", `0 0 ${W} ${H}`).attr("role", "img")
+    .attr("aria-label", "Map of countries with 50by35 data");
+  const shade = c => nHarm(c) >= 2 ? "c2" : nHarm(c) === 1 ? "c1" : "craw";
+  const tip = c => `<b>${esc(NAMES[c])}</b>` + all.filter(s => s.code === c).map(s =>
+    `${s.year} ${esc(s.survey)}: ${s.stage === "raw" ? "raw only" : fmt(s.n_ind) + " people"}`).join("<br>");
+  svg.append("g").selectAll("path").data([...feats, ...disputed]).join("path")
+    .attr("d", path).attr("class", f => code(f) ? "land " + shade(code(f)) : "land")
+    .attr("data-tip", f => code(f) ? tip(code(f)) : null);
+  // boundary lines; disputed and undetermined boundaries are dashed or dotted
+  const DASH = { "Dashed": "3 2", "Tightly Dashed": "1.5 1", "Dotted": "0.3 1.6" };
+  svg.append("g").selectAll("path").data(wbBorders.features).join("path")
+    .attr("d", path).attr("class", "border")
+    .attr("stroke-dasharray", f => DASH[f.properties.style] || null);
+  covered.forEach(f => {
+    const c = code(f), [px, py] = proj(d3.geoCentroid(f));
+    const g = svg.append("g").attr("data-tip", tip(c));
+    g.append("circle").attr("cx", px).attr("cy", py).attr("r", 12).attr("fill", "transparent");
+    g.append("circle").attr("cx", px).attr("cy", py).attr("r", 5).attr("class", "mk " + shade(c));
+    const [dx, dy, anchor] = LABEL_POS[c] || [9, 4, "start"];
+    g.append("text").attr("class", "lbl").attr("x", px + dx).attr("y", py + dy).attr("text-anchor", anchor).text(c);
+  });
+  const el = asEl("trk trk-card", "");
+  el.append(svg.node());
+  el.append(asEl("trk-legend",
+    `<span><i style="background:var(--map1)"></i>1 harmonized survey</span>` +
+    `<span><i style="background:var(--map2)"></i>2 harmonized surveys</span>` +
+    `<span><i style="background:var(--mapraw)"></i>Raw data only</span>`));
+  el.append(asEl("trk-note", "Boundaries: World Bank Official Boundaries. The boundaries, colors, denominations " +
+    "and any other information shown on this map do not imply any judgment on the part of the World Bank " +
+    "concerning the legal status of any territory or the endorsement or acceptance of such boundaries."));
+  return el;
+}
+```
+
+## Over time
+
+```{ojs}
+{
+  const order = [...countries].sort((a, b) => REGION[a].localeCompare(REGION[b]) || NAMES[a].localeCompare(NAMES[b]));
+  const W = 800, rowH = 30, M = { t: 24, r: 16, b: 8, l: 150 };
+  const H = M.t + order.length * rowH + M.b;
+  const x = d3.scaleLinear().domain([years[0] - .5, years[1] + .5]).range([M.l, W - M.r]);
+  const y = c => M.t + order.indexOf(c) * rowH + rowH / 2;
+  const svg = d3.create("svg").attr("viewBox", `0 0 ${W} ${H}`).attr("role", "img")
+    .attr("aria-label", "Survey years by country");
+  d3.range(years[0], years[1] + 1).forEach(yr => {
+    svg.append("line").attr("class", "gridline").attr("x1", x(yr)).attr("x2", x(yr)).attr("y1", M.t - 6).attr("y2", H - M.b);
+    svg.append("text").attr("x", x(yr)).attr("y", 12).attr("text-anchor", "middle").attr("class", "muted").text(yr);
+  });
+  let prevR = null;
+  order.forEach(c => {
+    if (REGION[c] !== prevR && prevR)
+      svg.append("line").attr("class", "axisline").attr("x1", 0).attr("x2", W - M.r)
+        .attr("y1", y(c) - rowH / 2).attr("y2", y(c) - rowH / 2);
+    prevR = REGION[c];
+    svg.append("text").attr("x", 0).attr("y", y(c) + 4).text(NAMES[c]);
+  });
+  all.forEach(s => {
+    const g = svg.append("g").attr("data-tip", s.stage === "raw"
+      ? `<b>${label(s)}</b>Raw data uploaded. Harmonization pending.`
+      : `<b>${label(s)}</b>${fmt(s.n_ind)} people, ${fmt(s.n_hh)} households<br><span class="k">${WTYPE[s.welfare_type]} aggregate, ${s.vermast}/${s.veralt}</span>`);
+    g.append("circle").attr("cx", x(s.year)).attr("cy", y(s.code)).attr("r", 14).attr("fill", "transparent");
+    if (s.stage === "raw")
+      g.append("circle").attr("cx", x(s.year)).attr("cy", y(s.code)).attr("r", 6)
+        .attr("fill", "var(--surface)").attr("stroke", "var(--s2)").attr("stroke-width", 2.5);
+    else
+      g.append("circle").attr("cx", x(s.year)).attr("cy", y(s.code)).attr("r", 7).attr("fill", "var(--s1)").attr("class", "mk");
+    g.append("text").attr("x", x(s.year) + 12).attr("y", y(s.code) + 4).attr("class", "muted").text(s.survey);
+  });
+  const el = asEl("trk trk-card", "");
+  el.append(svg.node());
+  el.append(asEl("trk-legend",
+    `<span><i style="background:var(--s1);border-radius:50%"></i>Harmonized</span>` +
+    `<span><i style="border:2px solid var(--s2);border-radius:50%"></i>Raw data only</span>`));
+  return el;
+}
+```
+
+## Variables
+
+```{ojs}
+asEl("trk trk-card", `<p class="trk-sub">Harmonized surveys with at least one non-missing value, of ${harm.length}</p>` +
+  `<div class="trk-vbars">` + [...CAMPURB, ...OPT].map(v => {
+    const usable = harm.filter(s => cov(s, v) > 0);
+    const empty = harm.filter(s => cov(s, v) === 0);
+    const tip = `<b><code>${v}</code></b>${usable.length} of ${harm.length} surveys have values` +
+      (empty.length ? `<br><span class="k">In file but all missing: ${empty.map(s => s.code + " " + s.year).join(", ")}</span>` : "");
+    return `<code>${v}</code>` +
+      `<div class="track" data-tip="${esc(tip)}"><div class="fill" style="width:${100 * usable.length / harm.length}%"></div></div>` +
+      `<span class="n">${usable.length}</span>`;
+  }).join("") + `</div>`)
+```
+
+Share of rows with a non-missing value, by survey. Numbers are shown where the share is below 100%.
+
+```{ojs}
+{
+  const groups = [{ label: "Mandatory", vars: ["core", ...CAMPURB] }, { label: "Optional", vars: OPT }];
+  const vars = groups.flatMap(g => g.vars);
+  // the core variables may not be missing, so they share one column
+  const coreCell = s => {
+    const ok = CORE.every(v => cov(s, v) === 100);
+    const tip = `<b>${label(s)}</b>Core variables (${CORE.join(", ")}): ${ok ? "complete" : "some missing"}`;
+    return `<div class="trk-cell ${ok ? "b5" : "b3"}" data-tip="${esc(tip)}">${ok ? "" : "!"}</div>`;
+  };
+  let h = `<div></div>` + groups.map(g => `<div class="grp" style="grid-column: span ${g.vars.length}">${g.label}</div>`).join("");
+  h += `<div></div>` + vars.map(v => `<div class="hdr">${v === "core" ? "core (9)" : v}</div>`).join("");
+  let prev = null;
+  all.filter(s => s.stage === "approved").forEach(s => {
+    if (prev && prev !== s.code) h += `<div class="sep"></div>`;
+    h += `<div class="rl"><span>${prev === s.code ? "" : esc(NAMES[s.code])}</span><span class="yr">${s.year} ${esc(s.survey)}</span></div>` +
+      vars.map(v => v === "core" ? coreCell(s) : cellHTML(s, v)).join("");
+    prev = s.code;
+  });
+  const legend = BINS.map(([b, l]) => `<span><i class="trk-cell ${b}"></i>${l}</span>`).join("") +
+    `<span><i class="trk-cell na"></i>not in file</span>`;
+  return asEl("trk trk-card",
+    `<div class="trk-scroll"><div class="trk-hm" style="grid-template-columns: max-content repeat(${vars.length}, 24px)">${h}</div></div>` +
+    `<div class="trk-legend">${legend}</div>`);
+}
+```
+
+```{ojs}
+// one row per survey; pct_<var> is the non-missing share, empty when the variable is not in the file
+{
+  const cols = ["surveyid", "code", "country", "year", "survey", "stage", "vermast", "veralt",
+    "n_ind", "n_hh", "welfare_type", "camp_share", ...D.schema_vars.map(v => "pct_" + v)];
+  const rows = all.map(s => ({
+    surveyid: s.surveyid, code: s.code, country: NAMES[s.code], year: s.year, survey: s.survey,
+    stage: s.stage === "raw" ? "raw only" : "harmonized", vermast: s.vermast, veralt: s.veralt,
+    n_ind: s.n_ind, n_hh: s.n_hh, welfare_type: WTYPE[s.welfare_type], camp_share: s.camp_share,
+    ...Object.fromEntries(D.schema_vars.map(v => ["pct_" + v, s.missing ? cov(s, v) : null]))
+  }));
+  const csv = d3.csvFormat(rows, cols);
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(new Blob([csv], { type: "text/csv" }));
+  a.download = `50by35_data_coverage_${D.generated}.csv`;
+  a.className = "btn btn-outline-primary btn-sm";
+  a.textContent = "Download coverage data (CSV)";
+  return a;
+}
+```
