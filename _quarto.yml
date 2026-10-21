@@ -23,6 +23,9 @@ book:
     - part: "Reference"
       chapters:
         - chapters/05-schema.qmd
+    - part: "Tracking"
+      chapters:
+        - chapters/06-tracking.qmd
 
 bibliography: references.bib
 

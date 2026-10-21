@@ -22,9 +22,10 @@ quarto render      # full render to docs/ (gitignored)
 - `docs/` and `.quarto/` are build output and are gitignored. CI
   (`.github/workflows/publish.yml`) renders the book and deploys it to GitHub Pages on every push
   to `main`. Do not commit rendered output.
-- The only executed chunk in the book is a Mermaid diagram in `index.qmd`. All R and Stata code
-  in the chapters is in plain fenced blocks and is **not** executed at render time, so CI needs no
-  Stata license and there is no `_freeze/` cache to maintain.
+- The executed chunks in the book are a Mermaid diagram in `index.qmd` and the OJS (client-side
+  JavaScript) cells of `chapters/06-tracking.qmd`. All R and Stata code in the chapters is in plain
+  fenced blocks and is **not** executed at render time, so CI needs no Stata license or datalibweb
+  token and there is no `_freeze/` cache to maintain.
 
 ## Repository layout
 
@@ -33,11 +34,12 @@ quarto render      # full render to docs/ (gitignored)
 | `index.qmd`, `chapters/` | The book. Order and parts are set in `_quarto.yml`, not by the filesystem |
 | `R/`, `Stata/` | Pipeline scripts, shared helpers and schema validators (parallel implementations) |
 | `Stata/*_WELF.do` | Example harmonization scripts, one per survey (15 today) |
+| `chapters/tracking/` | Data for the Data Coverage page: `coverage.json` (committed snapshot) and World Bank boundary GeoJSON |
 | `wiki/` | Contributor setup docs (Quarto, R/Stata, renv). Not part of the book |
 
 Book structure: `index.qmd`, then Part "Pipeline" (`01-raw-upload`, `02-harmonization`,
-`03-harmonized-upload`), Part "Access" (`04-access`), Part "Reference" (`05-schema`). When adding,
-removing or reordering chapters, edit `book.chapters` in `_quarto.yml`.
+`03-harmonized-upload`), Part "Access" (`04-access`), Part "Reference" (`05-schema`), Part "Tracking" (`06-tracking`, Data Coverage). When
+adding, removing or reordering chapters, edit `book.chapters` in `_quarto.yml`.
 
 ## The pipeline the book documents
 
@@ -86,6 +88,21 @@ removing or reordering chapters, edit `book.chapters` in `_quarto.yml`.
 - **Indicator XML** must keep the layout the PRIMUS approval page can display: one `<Welfare>`,
   one `<ByGroup byCondition="none">` with `<By>` empty, camp breakdown as a `Subgroup` key, and
   the documented key order. Other group names and by-groups were tested and render no tables.
+
+## Data Coverage appendix
+
+`chapters/06-tracking.qmd` draws the map, timeline and variable heatmap from
+`chapters/tracking/coverage.json`, written by `R/tracking_snapshot.R` (R only, a maintenance tool
+rather than a pipeline step; needs a datalibweb token and the World Bank network, so CI cannot run
+it). Refresh and commit the JSON by hand after new approvals (see `wiki/refresh-coverage.md`). The
+map uses the World Bank Official Boundaries (`countries.geojson`, `disputed.geojson`,
+`borders.geojson`), written by `R/tracking_boundaries.R`; keep the disclaimer under the map, and
+draw boundary lines by their `style` (dashed or dotted for disputed and undetermined boundaries).
+The page lists countries in the `NAMES` and `REGION` cells: a survey from an unlisted country
+breaks it, and each name must match `WB_ADM0_NA` in `countries.geojson` exactly. `schema_vars` in the script and the variable groups in the chapter follow
+`chapters/05-schema.qmd`. A "share of refugees represented" figure was considered and deferred:
+survey weights are not comparable across files and the UNHCR denominators depend on which
+populations a survey covers.
 
 ## Schema and validators
 
