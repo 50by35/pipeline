@@ -1,5 +1,5 @@
 {
-  "generated": "2026-10-21",
+  "generated": "2026-10-26",
   "schema_vars": ["code", "year", "survname", "hhid", "pid", "welfare", "welfare_self", "welfare_type", "weight", "camp", "urban", "natpovline", "hhsize", "age", "male", "educat4", "empstat", "arrival_year", "camp_pcode", "camp_name", "camp_lat", "camp_lon", "strata", "psu"],
   "surveys": [
     {
@@ -237,6 +237,45 @@
       }
     },
     {
+      "surveyid": "JOR_2025_VAF_V01_M_V01_A_FDP",
+      "code": "JOR",
+      "year": 2025,
+      "survey": "VAF",
+      "vermast": "V01",
+      "veralt": "V01",
+      "uploaded": "Oct 26 2026 01:50 PM",
+      "n_ind": 25936,
+      "n_hh": 4902,
+      "camp_share": 18.7,
+      "welfare_type": 1,
+      "missing": {
+        "code": 0,
+        "year": 0,
+        "survname": 0,
+        "hhid": 0,
+        "pid": 0,
+        "welfare": 0,
+        "welfare_self": 0,
+        "welfare_type": 0,
+        "weight": 0,
+        "camp": 0,
+        "urban": 100,
+        "natpovline": 0,
+        "hhsize": 0,
+        "age": 1.9,
+        "male": 1.9,
+        "educat4": 50.6,
+        "empstat": null,
+        "arrival_year": null,
+        "camp_pcode": null,
+        "camp_name": null,
+        "camp_lat": null,
+        "camp_lon": null,
+        "strata": null,
+        "psu": null
+      }
+    },
+    {
       "surveyid": "JOR_2023_VAF_V01_M_V01_A_FDP",
       "code": "JOR",
       "year": 2023,
@@ -432,6 +471,45 @@
       }
     },
     {
+      "surveyid": "COL_2024_GEIH_V01_M_V01_A_FDP",
+      "code": "COL",
+      "year": 2024,
+      "survey": "GEIH",
+      "vermast": "V01",
+      "veralt": "V01",
+      "uploaded": "Oct 26 2026 01:50 PM",
+      "n_ind": 30699,
+      "n_hh": 12459,
+      "camp_share": 0,
+      "welfare_type": 2,
+      "missing": {
+        "code": 0,
+        "year": 0,
+        "survname": 0,
+        "hhid": 0,
+        "pid": 0,
+        "welfare": 0,
+        "welfare_self": 0,
+        "welfare_type": 0,
+        "weight": 0,
+        "camp": 0,
+        "urban": 100,
+        "natpovline": 0,
+        "hhsize": 0,
+        "age": 0,
+        "male": 0,
+        "educat4": 0.6,
+        "empstat": null,
+        "arrival_year": 0,
+        "camp_pcode": null,
+        "camp_name": null,
+        "camp_lat": null,
+        "camp_lon": null,
+        "strata": null,
+        "psu": null
+      }
+    },
+    {
       "surveyid": "COL_2023_GEIH_V01_M_V01_A_FDP",
       "code": "COL",
       "year": 2023,
@@ -594,12 +672,6 @@
       "year": 2024,
       "survey": "ENAHOPV",
       "surveyid": "PER_2024_ENAHOPV_V01_M"
-    },
-    {
-      "code": "JOR",
-      "year": 2025,
-      "survey": "VAF",
-      "surveyid": "JOR_2025_VAF_V01_M"
     }
   ]
 }
