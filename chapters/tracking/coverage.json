@@ -1,5 +1,5 @@
 {
-  "generated": "2026-10-26",
+  "generated": "2026-11-09",
   "schema_vars": ["code", "year", "survname", "hhid", "pid", "welfare", "welfare_self", "welfare_type", "weight", "camp", "urban", "natpovline", "hhsize", "age", "male", "educat4", "empstat", "arrival_year", "camp_pcode", "camp_name", "camp_lat", "camp_lon", "strata", "psu"],
   "surveys": [
     {
@@ -351,6 +351,45 @@
         "camp_lon": null,
         "strata": null,
         "psu": null
+      }
+    },
+    {
+      "surveyid": "ETH_2022_SESRE_V01_M_V02_A_FDP",
+      "code": "ETH",
+      "year": 2022,
+      "survey": "SESRE",
+      "vermast": "V01",
+      "veralt": "V02",
+      "uploaded": "Nov 06 2026 04:52 PM",
+      "n_ind": 8327,
+      "n_hh": 1688,
+      "camp_share": 88.1,
+      "welfare_type": 1,
+      "missing": {
+        "code": 0,
+        "year": 0,
+        "survname": 0,
+        "hhid": 0,
+        "pid": 0,
+        "welfare": 0,
+        "welfare_self": 0,
+        "welfare_type": 0,
+        "weight": 0,
+        "camp": 0,
+        "urban": 100,
+        "natpovline": null,
+        "hhsize": 0,
+        "age": 0,
+        "male": 0,
+        "educat4": 44.3,
+        "empstat": 0,
+        "arrival_year": null,
+        "camp_pcode": null,
+        "camp_name": null,
+        "camp_lat": null,
+        "camp_lon": null,
+        "strata": 0,
+        "psu": 0
       }
     },
     {
